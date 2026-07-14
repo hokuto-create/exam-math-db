@@ -17,7 +17,7 @@
 | ライブラリ | CDN読込のみ(supabase-js v2 / MathJax v3)。ビルド工程なし |
 | バックエンド | Supabase(PostgreSQL + RLS)。URLとanon keyは `index.html` 冒頭の定数プレースホルダに後で差し込む |
 | 数式表示 | MathJax(inline math: `$...$`) |
-| デザイン | ダーク系・モバイルファースト(iPhone/iPad主体) |
+| デザイン | 明るい配色(クリーム系ライトテーマ)・モバイルファースト(iPhone/iPad主体) |
 
 Supabase未接続(プレースホルダのまま)の場合は**デモモード**として動作し、JS内のサンプルデータで全画面を確認できる(変更はページ再読込で消える)。
 
@@ -164,7 +164,7 @@ create policy "comments_anon_hide_TEMP" on comments
 ## コーディング規約
 
 - **単一 `index.html`** にCSS/JSを同梱。ビルドツール・フレームワーク不使用、ライブラリはCDNのみ
-- ダーク系配色・モバイルファースト(基準幅 ~390px、`max-width` でタブレット対応)
+- 明るい配色(クリーム系ライトテーマ)・モバイルファースト(基準幅 ~390px、`max-width` でタブレット対応)
 - localStorage キーは **`examdb_` プレフィックス**で統一
   - `examdb_device_uuid` — 端末識別UUID
   - `examdb_reported_comments` — 通報済みコメントIDの配列(JSON)
