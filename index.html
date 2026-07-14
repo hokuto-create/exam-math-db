@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1115">
+<title>入試数学 過去問DB</title>
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+  options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+};
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --bg: #0f1115;
+  --bg2: #151821;
+  --card: #1b1f2a;
+  --card2: #222736;
+  --border: #2b3140;
+  --text: #e8eaf0;
+  --muted: #98a1b3;
+  --accent: #5b8cff;
+  --accent-dim: #2c4482;
+  --star: #f5b942;
+  --danger: #e5534b;
+  --ok: #3fb27f;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-text-size-adjust: 100%;
+}
+#app { max-width: 760px; margin: 0 auto; padding: 0 12px calc(24px + env(safe-area-inset-bottom)); }
+header.site {
+  padding: 14px 2px 10px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+header.site h1 { font-size: 18px; margin: 0; letter-spacing: .02em; }
+header.site h1 .accent { color: var(--accent); }
+header.site .sub { color: var(--muted); font-size: 12px; }
+.demo-banner {
+  background: #3a2f1a;
+  border: 1px solid #6b5619;
+  color: #f0d489;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12.5px;
+  margin-bottom: 12px;
+}
+section.view { display: block; }
+section.view[hidden] { display: none; }
+
+/* ---------- buttons / chips ---------- */
+button {
+  font: inherit;
+  color: var(--text);
+  background: var(--card2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+button:active { opacity: .8; }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+button.danger-btn { color: var(--danger); border-color: #59333a; }
+button.ghost { background: transparent; }
+button.small { padding: 4px 10px; font-size: 12.5px; border-radius: 6px; }
+.chip {
+  display: inline-block;
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--muted);
+  font-size: 12.5px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.chip.on { background: var(--accent-dim); border-color: var(--accent); color: #dbe6ff; }
+.chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* ---------- filters ---------- */
+details.filters {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0 14px;
+  margin-bottom: 14px;
+}
+details.filters summary {
+  cursor: pointer;
+  padding: 12px 0;
+  font-weight: 600;
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+details.filters summary::-webkit-details-marker { display: none; }
+details.filters summary::after { content: "▸"; color: var(--muted); transition: transform .15s; }
+details.filters[open] summary::after { transform: rotate(90deg); }
+.filter-body { padding: 2px 0 14px; display: flex; flex-direction: column; gap: 14px; }
+.filter-group h3 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+  letter-spacing: .05em;
+}
+.method-group-label {
+  width: 100%;
+  font-size: 11px;
+  color: var(--muted);
+  margin: 6px 0 0;
+}
+.year-range { display: flex; align-items: center; gap: 8px; }
+.year-range input, select, input[type="text"], input[type="number"], input[type="password"], textarea {
+  font: inherit;
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  width: 100%;
+}
+.year-range input { width: 90px; }
+textarea { resize: vertical; }
+.filter-actions { display: flex; gap: 8px; }
+
+/* ---------- result cards ---------- */
+.result-meta { color: var(--muted); font-size: 12.5px; margin: 4px 2px 10px; }
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+.card:active { background: var(--card2); }
+.card .title { font-weight: 700; font-size: 15.5px; }
+.card .title .qno { color: var(--accent); }
+.card .tags { margin: 7px 0 6px; display: flex; flex-wrap: wrap; gap: 4px; }
+.tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #253048;
+  color: #a9c1f0;
+  white-space: nowrap;
+}
+.tag.method { background: #203a30; color: #93d7b4; }
+.card .stats { display: flex; gap: 14px; font-size: 12.5px; color: var(--muted); align-items: center; flex-wrap: wrap; }
+.stars { color: var(--star); letter-spacing: 1px; }
+.empty-state {
+  text-align: center;
+  color: var(--muted);
+  padding: 48px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+}
+.empty-state .big { font-size: 32px; margin-bottom: 8px; }
+
+/* ---------- detail ---------- */
+.back-row { margin: 4px 0 12px; }
+.detail-head {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+.detail-head h2 { margin: 0 0 4px; font-size: 18px; }
+.detail-head .exam-type { color: var(--muted); font-size: 13px; }
+.tag-section { margin-top: 10px; }
+.tag-section .label { font-size: 11.5px; color: var(--muted); margin-bottom: 3px; }
+.vote-box, .comments-box {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+.vote-box h3, .comments-box h3 { margin: 0 0 8px; font-size: 14px; }
+.vote-stars { display: flex; gap: 4px; margin: 6px 0 8px; }
+.vote-stars button {
+  font-size: 26px;
+  line-height: 1;
+  padding: 6px 8px;
+  background: transparent;
+  border: none;
+  color: #4a5164;
+}
+.vote-stars button.lit { color: var(--star); }
+.vote-status { font-size: 12.5px; color: var(--muted); }
+.vote-status .mine { color: var(--ok); }
+.comment-form { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.comment-form .form-foot { display: flex; justify-content: space-between; align-items: center; }
+.char-count { font-size: 12px; color: var(--muted); }
+.char-count.over { color: var(--danger); }
+.comment {
+  border-top: 1px solid var(--border);
+  padding: 10px 2px;
+}
+.comment .body { white-space: pre-wrap; word-break: break-word; }
+.comment .foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.report-btn { font-size: 11.5px; color: var(--muted); background: transparent; border: none; padding: 2px 4px; }
+.report-btn[disabled] { opacity: .5; cursor: default; }
+
+/* ---------- admin ---------- */
+.admin-panel h2 { font-size: 16px; margin: 16px 0 8px; }
+.admin-login { max-width: 320px; display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+.admin-row {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  font-size: 13.5px;
+}
+.admin-row .row-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.admin-row .row-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.admin-row .c-body { color: var(--muted); margin: 4px 0; word-break: break-word; }
+.admin-row .badge {
+  font-size: 11px;
+  border-radius: 999px;
+  padding: 1px 8px;
+  background: #3a2328;
+  color: #f0a0a0;
+}
+.admin-row .badge.hidden-badge { background: #3a3a3a; color: #ccc; }
+.form-grid { display: flex; flex-direction: column; gap: 10px; }
+.form-grid label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 3px; }
+.form-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 2px 10px;
+  font-size: 13px;
+}
+.checkbox-grid label { display: flex; align-items: center; gap: 6px; color: var(--text); font-size: 13px; margin: 0; padding: 3px 0; }
+.checkbox-grid .group-head { grid-column: 1 / -1; font-size: 11.5px; color: var(--muted); margin-top: 6px; font-weight: 600; }
+.admin-toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+#problem-form-wrap {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+/* ---------- footer / toast ---------- */
+footer.site {
+  margin-top: 40px;
+  padding: 16px 2px;
+  text-align: center;
+  color: #4a5164;
+  font-size: 11px;
+}
+footer.site .admin-link {
+  background: none;
+  border: none;
+  color: #3a4152;
+  font-size: 11px;
+  padding: 4px;
+  text-decoration: underline;
+}
+#toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(28px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  background: #2b3140;
+  color: var(--text);
+  border-radius: 999px;
+  padding: 9px 18px;
+  font-size: 13px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.4);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s;
+  max-width: 90vw;
+  z-index: 100;
+}
+#toast.show { opacity: 1; }
+
+@media (min-width: 600px) {
+  body { font-size: 15.5px; }
+  header.site h1 { font-size: 21px; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="site">
+    <h1>入試数学 <span class="accent">過去問DB</span></h1>
+    <span class="sub">単元×解法で探す大学入試数学</span>
+  </header>
+  <div id="demo-banner" class="demo-banner" hidden>
+    デモモード(Supabase未接続)— サンプルデータを表示中。投票・コメント等の変更は保存されません。
+  </div>
+
+  <!-- ========== 1. 一覧+絞り込み ========== -->
+  <section id="view-list" class="view">
+    <details class="filters" open>
+      <summary>絞り込み</summary>
+      <div class="filter-body">
+        <div class="filter-group">
+          <h3>大学</h3>
+          <div id="university-chips" class="chip-row"></div>
+        </div>
+        <div class="filter-group">
+          <h3>年度</h3>
+          <div class="year-range">
+            <input id="year-from" type="number" inputmode="numeric" placeholder="1990"> 〜
+            <input id="year-to" type="number" inputmode="numeric" placeholder="2026">
+          </div>
+        </div>
+        <div class="filter-group">
+          <h3>単元タグ(OR)</h3>
+          <div id="unit-chips" class="chip-row"></div>
+        </div>
+        <div class="filter-group">
+          <h3>解法タグ(OR)</h3>
+          <div id="method-chips" class="chip-row"></div>
+        </div>
+        <div class="filter-group">
+          <h3>平均難易度</h3>
+          <select id="diff-band">
+            <option value="">指定なし</option>
+            <option value="1">★ 〜1.9</option>
+            <option value="2">★ 2.0〜2.9</option>
+            <option value="3">★ 3.0〜3.9</option>
+            <option value="4">★ 4.0〜</option>
+          </select>
+        </div>
+        <div class="filter-actions">
+          <button id="clear-filters" class="ghost small">条件をクリア</button>
+        </div>
+      </div>
+    </details>
+    <div id="result-meta" class="result-meta"></div>
+    <div id="result-list"></div>
+  </section>
+
+  <!-- ========== 2. 問題詳細 ========== -->
+  <section id="view-detail" class="view" hidden>
+    <div class="back-row"><button id="back-to-list" class="small ghost">← 一覧へ戻る</button></div>
+    <div id="detail-head" class="detail-head"></div>
+    <div class="vote-box">
+      <h3>難易度投票</h3>
+      <div id="vote-stars" class="vote-stars"></div>
+      <div id="vote-status" class="vote-status"></div>
+    </div>
+    <div class="comments-box">
+      <h3>講評コメント</h3>
+      <div class="comment-form">
+        <textarea id="comment-input" rows="3" placeholder="講評を書く(数式は $x^2$ のように囲む)"></textarea>
+        <div class="form-foot">
+          <span id="comment-count" class="char-count">0 / 500</span>
+          <button id="comment-submit" class="primary small">投稿する</button>
+        </div>
+      </div>
+      <div id="comment-list"></div>
+    </div>
+  </section>
+
+  <!-- ========== 3. 管理画面 ========== -->
+  <section id="view-admin" class="view" hidden>
+    <div class="back-row"><button id="admin-back" class="small ghost">← 一覧へ戻る</button></div>
+    <div id="admin-login" class="admin-login">
+      <h2>管理画面</h2>
+      <input id="admin-password" type="password" placeholder="パスワード" autocomplete="off">
+      <button id="admin-login-btn" class="primary">ログイン</button>
+    </div>
+    <div id="admin-panel" class="admin-panel" hidden>
+      <h2>問題管理</h2>
+      <div class="admin-toolbar">
+        <button id="problem-new-btn" class="primary small">＋ 新規登録</button>
+      </div>
+      <div id="problem-form-wrap" hidden>
+        <div class="form-grid">
+          <div class="form-2col">
+            <div><label>大学</label><input id="pf-university" type="text" placeholder="東京大学"></div>
+            <div><label>年度</label><input id="pf-year" type="number" inputmode="numeric" placeholder="2026"></div>
+          </div>
+          <div class="form-2col">
+            <div><label>試験区分(任意)</label><input id="pf-exam-type" type="text" placeholder="前期理系"></div>
+            <div><label>大問番号</label><input id="pf-question-no" type="number" inputmode="numeric" placeholder="1"></div>
+          </div>
+          <div><label>単元タグ</label><div id="pf-unit-checks" class="checkbox-grid"></div></div>
+          <div><label>解法タグ</label><div id="pf-method-checks" class="checkbox-grid"></div></div>
+          <div><label>管理者メモ(任意)</label><textarea id="pf-admin-note" rows="2"></textarea></div>
+          <div class="filter-actions">
+            <button id="pf-save" class="primary">保存</button>
+            <button id="pf-cancel" class="ghost">キャンセル</button>
+          </div>
+        </div>
+      </div>
+      <div id="admin-problem-list"></div>
+      <h2>コメント管理</h2>
+      <div class="admin-toolbar">
+        <select id="admin-comment-sort" style="width:auto">
+          <option value="reported">通報数順</option>
+          <option value="newest">新着順</option>
+        </select>
+      </div>
+      <div id="admin-comment-list"></div>
+    </div>
+  </section>
+
+  <footer class="site">
+    <div>入試数学 過去問DB — 問題文・解説は掲載していません</div>
+    <button id="admin-link" class="admin-link">管理</button>
+  </footer>
+</div>
+<div id="toast"></div>
+
+<script>
+"use strict";
+
+/* =====================================================================
+ * 設定(デプロイ時にここを差し替える)
+ * =================================================================== */
+const SUPABASE_URL = "YOUR_SUPABASE_URL";        // 例: https://xxxx.supabase.co
+const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+const ADMIN_PASSWORD = "CHANGE_ME_ADMIN_PASSWORD"; // 簡易UIゲート(本命の保護はRLS側)
+
+const LS_KEYS = {
+  deviceUuid: "examdb_device_uuid",
+  reportedComments: "examdb_reported_comments",
+};
+const COMMENT_MAX_LENGTH = 500;
+
+/* =====================================================================
+ * タグ定義(正本)— IDの振り直し・削除は禁止。追加は末尾IDで。
+ * =================================================================== */
+const UNIT_TAGS = [
+  { id: 1,  name: "数と式・論証" },
+  { id: 2,  name: "二次関数" },
+  { id: 3,  name: "図形と計量" },
+  { id: 4,  name: "場合の数" },
+  { id: 5,  name: "確率" },
+  { id: 6,  name: "確率漸化式" },
+  { id: 7,  name: "整数" },
+  { id: 8,  name: "図形の性質" },
+  { id: 9,  name: "式と証明・高次方程式" },
+  { id: 10, name: "図形と方程式" },
+  { id: 11, name: "三角関数" },
+  { id: 12, name: "指数・対数" },
+  { id: 13, name: "微分法(数II)" },
+  { id: 14, name: "積分法(数II)" },
+  { id: 15, name: "数列" },
+  { id: 16, name: "統計的な推測" },
+  { id: 17, name: "ベクトル(平面)" },
+  { id: 18, name: "ベクトル(空間)" },
+  { id: 19, name: "複素数平面" },
+  { id: 20, name: "二次曲線" },
+  { id: 21, name: "極限" },
+  { id: 22, name: "微分法(数III)" },
+  { id: 23, name: "積分法(数III)・求積" },
+  { id: 24, name: "曲線の長さ・回転体" },
+  { id: 25, name: "融合・総合" },
+];
+
+const METHOD_TAGS = [
+  { id: 1,  group: "方針・戦略", name: "実験して規則性を発見" },
+  { id: 2,  group: "方針・戦略", name: "小さい場合・端の場合から考える" },
+  { id: 3,  group: "方針・戦略", name: "対称性の利用" },
+  { id: 4,  group: "方針・戦略", name: "一般化・特殊化" },
+  { id: 5,  group: "方針・戦略", name: "逆向きに考える" },
+  { id: 6,  group: "論証", name: "数学的帰納法" },
+  { id: 7,  group: "論証", name: "背理法" },
+  { id: 8,  group: "論証", name: "対偶の利用" },
+  { id: 9,  group: "論証", name: "鳩の巣原理" },
+  { id: 10, group: "論証", name: "必要条件で絞って十分性確認" },
+  { id: 11, group: "整数", name: "剰余で分類(mod)" },
+  { id: 12, group: "整数", name: "素因数分解・約数" },
+  { id: 13, group: "整数", name: "不等式で範囲を絞る" },
+  { id: 14, group: "整数", name: "互除法・不定方程式" },
+  { id: 15, group: "関数・方程式", name: "置換" },
+  { id: 16, group: "関数・方程式", name: "文字定数の分離" },
+  { id: 17, group: "関数・方程式", name: "解の配置" },
+  { id: 18, group: "関数・方程式", name: "存在条件への言い換え(逆像法)" },
+  { id: 19, group: "関数・方程式", name: "1文字固定(予選決勝法)" },
+  { id: 20, group: "関数・方程式", name: "対称式" },
+  { id: 21, group: "図形", name: "座標設定" },
+  { id: 22, group: "図形", name: "ベクトルで処理" },
+  { id: 23, group: "図形", name: "複素数平面で処理" },
+  { id: 24, group: "図形", name: "初等幾何で処理" },
+  { id: 25, group: "図形", name: "三角関数でパラメータ表示" },
+  { id: 26, group: "図形", name: "空間図形を平面で切る" },
+  { id: 27, group: "解析", name: "はさみうちの原理" },
+  { id: 28, group: "解析", name: "平均値の定理" },
+  { id: 29, group: "解析", name: "微分して増減を調べる" },
+  { id: 30, group: "解析", name: "積分と不等式" },
+  { id: 31, group: "解析", name: "区分求積法" },
+  { id: 32, group: "解析", name: "漸化式を立てる" },
+  { id: 33, group: "解析", name: "誘導の構造を見抜く" },
+  { id: 34, group: "確率・場合の数", name: "余事象・排反に分ける" },
+  { id: 35, group: "確率・場合の数", name: "対等性・確率の対称性" },
+  { id: 36, group: "確率・場合の数", name: "場合分けの設計" },
+];
+
+const METHOD_TAG_GROUPS = [...new Set(METHOD_TAGS.map(t => t.group))];
+const unitTagName = id => (UNIT_TAGS.find(t => t.id === id) || { name: "?" }).name;
+const methodTagName = id => (METHOD_TAGS.find(t => t.id === id) || { name: "?" }).name;
+
+/* =====================================================================
+ * サンプルデータ(Supabase未接続時のフォールバック)
+ * =================================================================== */
+const SAMPLE_DATA = {
+  problems: [
+    { id: 1, university: "東京大学", year: 2026, exam_type: "前期理系", question_no: 1, unit_tags: [21, 23], method_tags: [27, 30], admin_note: "" },
+    { id: 2, university: "東京大学", year: 2026, exam_type: "前期理系", question_no: 4, unit_tags: [7], method_tags: [11, 6], admin_note: "" },
+    { id: 3, university: "東京大学", year: 2025, exam_type: "前期理系", question_no: 3, unit_tags: [6], method_tags: [32, 36], admin_note: "" },
+    { id: 4, university: "京都大学", year: 2026, exam_type: "前期理系", question_no: 2, unit_tags: [18], method_tags: [22, 26], admin_note: "" },
+    { id: 5, university: "京都大学", year: 2025, exam_type: "前期理系", question_no: 6, unit_tags: [7, 15], method_tags: [1, 6, 11], admin_note: "" },
+    { id: 6, university: "東北大学", year: 2026, exam_type: "前期理系", question_no: 5, unit_tags: [19], method_tags: [23, 3], admin_note: "" },
+    { id: 7, university: "東京工業大学", year: 2025, exam_type: "", question_no: 2, unit_tags: [23, 24], method_tags: [15, 29], admin_note: "" },
+    { id: 8, university: "早稲田大学", year: 2026, exam_type: "理工", question_no: 3, unit_tags: [5], method_tags: [34, 36], admin_note: "" },
+    { id: 9, university: "大阪大学", year: 2024, exam_type: "前期理系", question_no: 1, unit_tags: [21, 22], method_tags: [28, 29], admin_note: "" },
+    { id: 10, university: "一橋大学", year: 2026, exam_type: "", question_no: 2, unit_tags: [7], method_tags: [13, 12], admin_note: "" },
+  ],
+  votes: [
+    { id: 1, problem_id: 1, device_uuid: "demo-a", difficulty: 3 },
+    { id: 2, problem_id: 1, device_uuid: "demo-b", difficulty: 4 },
+    { id: 3, problem_id: 1, device_uuid: "demo-c", difficulty: 3 },
+    { id: 4, problem_id: 2, device_uuid: "demo-a", difficulty: 5 },
+    { id: 5, problem_id: 2, device_uuid: "demo-b", difficulty: 4 },
+    { id: 6, problem_id: 3, device_uuid: "demo-a", difficulty: 4 },
+    { id: 7, problem_id: 4, device_uuid: "demo-b", difficulty: 3 },
+    { id: 8, problem_id: 5, device_uuid: "demo-a", difficulty: 5 },
+    { id: 9, problem_id: 5, device_uuid: "demo-c", difficulty: 5 },
+    { id: 10, problem_id: 8, device_uuid: "demo-b", difficulty: 2 },
+    { id: 11, problem_id: 9, device_uuid: "demo-a", difficulty: 2 },
+  ],
+  comments: [
+    { id: 1, problem_id: 1, device_uuid: "demo-a", body: "誘導が丁寧なので方針は立てやすい。最後の評価で $\\frac{1}{n+1} < \\int_n^{n+1} \\frac{dx}{x} < \\frac{1}{n}$ を使えるかがポイント。", is_hidden: false, reported_count: 0, created_at: "2026-03-02T10:00:00Z" },
+    { id: 2, problem_id: 1, device_uuid: "demo-b", body: "はさみうちに気づけば完答できるセット内の得点源。", is_hidden: false, reported_count: 0, created_at: "2026-03-03T12:30:00Z" },
+    { id: 3, problem_id: 2, device_uuid: "demo-c", body: "mod 9 で分類すると見通しが良い。実験→帰納法の王道パターン。", is_hidden: false, reported_count: 0, created_at: "2026-03-05T09:15:00Z" },
+    { id: 4, problem_id: 5, device_uuid: "demo-a", body: "難問。$a_{n+1} = a_n^2 + 1$ 型の周期性に気づくまでが勝負。", is_hidden: false, reported_count: 1, created_at: "2026-02-28T18:00:00Z" },
+    { id: 5, problem_id: 2, device_uuid: "demo-d", body: "(不適切な内容のため非表示のサンプル)", is_hidden: true, reported_count: 3, created_at: "2026-03-06T00:00:00Z" },
+  ],
+};
+
+/* =====================================================================
+ * 共通ユーティリティ
+ * =================================================================== */
+const $ = sel => document.querySelector(sel);
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+let toastTimer = null;
+function toast(msg) {
+  const el = $("#toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 2600);
+}
+
+function typeset(el) {
+  if (window.MathJax && MathJax.typesetPromise) {
+    MathJax.typesetPromise([el]).catch(() => {});
+  }
+}
+
+function getDeviceUuid() {
+  let v = localStorage.getItem(LS_KEYS.deviceUuid);
+  if (!v) {
+    v = crypto.randomUUID();
+    localStorage.setItem(LS_KEYS.deviceUuid, v);
+  }
+  return v;
+}
+const DEVICE_UUID = getDeviceUuid();
+
+function getReportedComments() {
+  try { return JSON.parse(localStorage.getItem(LS_KEYS.reportedComments)) || []; }
+  catch { return []; }
+}
+function markReportedComment(id) {
+  const list = getReportedComments();
+  if (!list.includes(id)) {
+    list.push(id);
+    localStorage.setItem(LS_KEYS.reportedComments, JSON.stringify(list));
+  }
+}
+
+/* =====================================================================
+ * データ層(Supabase / デモのフォールバックを吸収)
+ * =================================================================== */
+const isSupabaseConfigured =
+  !SUPABASE_URL.includes("YOUR_") && !SUPABASE_ANON_KEY.includes("YOUR_");
+const sbClient = isSupabaseConfigured
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
+
+let demoNextId = { votes: 1000, comments: 1000, problems: 1000 };
+
+const api = {
+  async loadAll() {
+    if (!sbClient) {
+      // デモ: ディープコピーしてセッション内でのみ変更可能にする
+      state.problems = JSON.parse(JSON.stringify(SAMPLE_DATA.problems));
+      state.votes = JSON.parse(JSON.stringify(SAMPLE_DATA.votes));
+      state.comments = JSON.parse(JSON.stringify(SAMPLE_DATA.comments));
+      return;
+    }
+    const [p, v, c] = await Promise.all([
+      sbClient.from("problems").select("*").order("year", { ascending: false }),
+      sbClient.from("votes").select("*"),
+      sbClient.from("comments").select("*"),
+    ]);
+    for (const r of [p, v, c]) if (r.error) throw r.error;
+    state.problems = p.data;
+    state.votes = v.data;
+    state.comments = c.data;
+  },
+
+  async upsertVote(problemId, difficulty) {
+    if (sbClient) {
+      const { error } = await sbClient.from("votes").upsert(
+        { problem_id: problemId, device_uuid: DEVICE_UUID, difficulty },
+        { onConflict: "problem_id,device_uuid" }
+      );
+      if (error) throw error;
+    }
+    const existing = state.votes.find(
+      v => v.problem_id === problemId && v.device_uuid === DEVICE_UUID
+    );
+    if (existing) existing.difficulty = difficulty;
+    else state.votes.push({ id: demoNextId.votes++, problem_id: problemId, device_uuid: DEVICE_UUID, difficulty });
+  },
+
+  async addComment(problemId, body) {
+    if (sbClient) {
+      const { data, error } = await sbClient
+        .from("comments")
+        .insert({ problem_id: problemId, device_uuid: DEVICE_UUID, body })
+        .select()
+        .single();
+      if (error) throw error;
+      state.comments.push(data);
+      return;
+    }
+    state.comments.push({
+      id: demoNextId.comments++,
+      problem_id: problemId,
+      device_uuid: DEVICE_UUID,
+      body,
+      is_hidden: false,
+      reported_count: 0,
+      created_at: new Date().toISOString(),
+    });
+  },
+
+  async reportComment(commentId) {
+    if (sbClient) {
+      const { error } = await sbClient.rpc("report_comment", { target_id: commentId });
+      if (error) throw error;
+    }
+    const c = state.comments.find(c => c.id === commentId);
+    if (c) c.reported_count += 1;
+  },
+
+  async saveProblem(fields, editingId) {
+    if (sbClient) {
+      if (editingId != null) {
+        const { data, error } = await sbClient
+          .from("problems").update(fields).eq("id", editingId).select().single();
+        if (error) throw error;
+        const i = state.problems.findIndex(p => p.id === editingId);
+        if (i >= 0) state.problems[i] = data;
+      } else {
+        const { data, error } = await sbClient
+          .from("problems").insert(fields).select().single();
+        if (error) throw error;
+        state.problems.push(data);
+      }
+      return;
+    }
+    if (editingId != null) {
+      const p = state.problems.find(p => p.id === editingId);
+      Object.assign(p, fields);
+    } else {
+      state.problems.push({ id: demoNextId.problems++, created_at: new Date().toISOString(), ...fields });
+    }
+  },
+
+  async deleteProblem(id) {
+    if (sbClient) {
+      const { error } = await sbClient.from("problems").delete().eq("id", id);
+      if (error) throw error;
+    }
+    state.problems = state.problems.filter(p => p.id !== id);
+    state.votes = state.votes.filter(v => v.problem_id !== id);
+    state.comments = state.comments.filter(c => c.problem_id !== id);
+  },
+
+  async setCommentHidden(id, hidden) {
+    if (sbClient) {
+      const { error } = await sbClient.from("comments").update({ is_hidden: hidden }).eq("id", id);
+      if (error) throw error;
+    }
+    const c = state.comments.find(c => c.id === id);
+    if (c) c.is_hidden = hidden;
+  },
+};
+
+/* =====================================================================
+ * 状態
+ * =================================================================== */
+const state = {
+  problems: [],
+  votes: [],
+  comments: [],
+  filters: {
+    universities: [],
+    yearFrom: null,
+    yearTo: null,
+    unitTags: [],
+    methodTags: [],
+    diffBand: "",
+  },
+  currentProblemId: null,
+  adminAuthed: false,
+  editingProblemId: null, // null=フォーム非表示, 0=新規, >0=編集
+};
+
+/* =====================================================================
+ * 集計ヘルパー
+ * =================================================================== */
+function votesFor(problemId) {
+  return state.votes.filter(v => v.problem_id === problemId);
+}
+function avgDifficulty(problemId) {
+  const vs = votesFor(problemId);
+  if (vs.length === 0) return null;
+  return vs.reduce((s, v) => s + v.difficulty, 0) / vs.length;
+}
+function visibleCommentsFor(problemId) {
+  return state.comments
+    .filter(c => c.problem_id === problemId && !c.is_hidden)
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+}
+function myVoteFor(problemId) {
+  const v = state.votes.find(
+    v => v.problem_id === problemId && v.device_uuid === DEVICE_UUID
+  );
+  return v ? v.difficulty : null;
+}
+function starsHtml(avg) {
+  const n = Math.round(avg);
+  return `<span class="stars">${"★".repeat(n)}${"☆".repeat(5 - n)}</span>`;
+}
+function fmtDate(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d)) return "";
+  return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
+}
+function problemTitle(p) {
+  return `${p.university} ${p.year}${p.exam_type ? " " + p.exam_type : ""} 第${p.question_no}問`;
+}
+
+/* =====================================================================
+ * 画面切替
+ * =================================================================== */
+function showView(name) {
+  for (const id of ["view-list", "view-detail", "view-admin"]) {
+    document.getElementById(id).hidden = id !== `view-${name}`;
+  }
+  window.scrollTo(0, 0);
+}
+
+/* =====================================================================
+ * 1. 一覧+絞り込み
+ * =================================================================== */
+function buildFilterChips() {
+  // 大学(データから動的生成、既存の選択は維持)
+  const universities = [...new Set(state.problems.map(p => p.university))].sort((a, b) => a.localeCompare(b, "ja"));
+  state.filters.universities = state.filters.universities.filter(u => universities.includes(u));
+  const uWrap = $("#university-chips");
+  uWrap.innerHTML = "";
+  for (const u of universities) {
+    const chip = document.createElement("span");
+    chip.className = "chip" + (state.filters.universities.includes(u) ? " on" : "");
+    chip.textContent = u;
+    chip.onclick = () => {
+      const arr = state.filters.universities;
+      const i = arr.indexOf(u);
+      i >= 0 ? arr.splice(i, 1) : arr.push(u);
+      chip.classList.toggle("on");
+      renderList();
+    };
+    uWrap.appendChild(chip);
+  }
+
+  // 単元タグ
+  const unitWrap = $("#unit-chips");
+  unitWrap.innerHTML = "";
+  for (const t of UNIT_TAGS) {
+    const chip = document.createElement("span");
+    chip.className = "chip" + (state.filters.unitTags.includes(t.id) ? " on" : "");
+    chip.textContent = t.name;
+    chip.onclick = () => {
+      const arr = state.filters.unitTags;
+      const i = arr.indexOf(t.id);
+      i >= 0 ? arr.splice(i, 1) : arr.push(t.id);
+      chip.classList.toggle("on");
+      renderList();
+    };
+    unitWrap.appendChild(chip);
+  }
+
+  // 解法タグ(グループ見出しつき)
+  const mWrap = $("#method-chips");
+  mWrap.innerHTML = "";
+  for (const g of METHOD_TAG_GROUPS) {
+    const label = document.createElement("div");
+    label.className = "method-group-label";
+    label.textContent = g;
+    mWrap.appendChild(label);
+    for (const t of METHOD_TAGS.filter(t => t.group === g)) {
+      const chip = document.createElement("span");
+      chip.className = "chip" + (state.filters.methodTags.includes(t.id) ? " on" : "");
+      chip.textContent = t.name;
+      chip.onclick = () => {
+        const arr = state.filters.methodTags;
+        const i = arr.indexOf(t.id);
+        i >= 0 ? arr.splice(i, 1) : arr.push(t.id);
+        chip.classList.toggle("on");
+        renderList();
+      };
+      mWrap.appendChild(chip);
+    }
+  }
+}
+
+function filteredProblems() {
+  const f = state.filters;
+  return state.problems
+    .filter(p => {
+      if (f.universities.length && !f.universities.includes(p.university)) return false;
+      if (f.yearFrom != null && p.year < f.yearFrom) return false;
+      if (f.yearTo != null && p.year > f.yearTo) return false;
+      if (f.unitTags.length && !(p.unit_tags || []).some(t => f.unitTags.includes(t))) return false;
+      if (f.methodTags.length && !(p.method_tags || []).some(t => f.methodTags.includes(t))) return false;
+      if (f.diffBand) {
+        const a = avgDifficulty(p.id);
+        if (a === null) return false;
+        const band = Number(f.diffBand);
+        if (band === 4 ? a < 4 : (a < band || a >= band + 1)) return false;
+      }
+      return true;
+    })
+    .sort((a, b) =>
+      b.year - a.year ||
+      a.university.localeCompare(b.university, "ja") ||
+      a.question_no - b.question_no
+    );
+}
+
+function renderList() {
+  const list = filteredProblems();
+  $("#result-meta").textContent = `${list.length} 件`;
+  const wrap = $("#result-list");
+  wrap.innerHTML = "";
+
+  if (list.length === 0) {
+    wrap.innerHTML = `
+      <div class="empty-state">
+        <div class="big">🔍</div>
+        <div>条件に合う問題が見つかりませんでした。</div>
+        <div>絞り込み条件を変えてみてください。</div>
+      </div>`;
+    return;
+  }
+
+  for (const p of list) {
+    const avg = avgDifficulty(p.id);
+    const nVotes = votesFor(p.id).length;
+    const nComments = visibleCommentsFor(p.id).length;
+    const card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = `
+      <div class="title">${escapeHtml(p.university)} ${p.year}${p.exam_type ? " " + escapeHtml(p.exam_type) : ""} <span class="qno">第${p.question_no}問</span></div>
+      <div class="tags">
+        ${(p.unit_tags || []).map(t => `<span class="tag">${escapeHtml(unitTagName(t))}</span>`).join("")}
+        ${(p.method_tags || []).map(t => `<span class="tag method">${escapeHtml(methodTagName(t))}</span>`).join("")}
+      </div>
+      <div class="stats">
+        <span>${avg === null ? "難易度 未投票" : `${starsHtml(avg)} ${avg.toFixed(1)}(${nVotes}票)`}</span>
+        <span>💬 ${nComments}</span>
+      </div>`;
+    card.onclick = () => openDetail(p.id);
+    wrap.appendChild(card);
+  }
+}
+
+/* =====================================================================
+ * 2. 問題詳細
+ * =================================================================== */
+function openDetail(problemId) {
+  state.currentProblemId = problemId;
+  renderDetail();
+  showView("detail");
+}
+
+function renderDetail() {
+  const p = state.problems.find(p => p.id === state.currentProblemId);
+  if (!p) { showView("list"); return; }
+
+  $("#detail-head").innerHTML = `
+    <h2>${escapeHtml(p.university)} ${p.year} <span style="color:var(--accent)">第${p.question_no}問</span></h2>
+    ${p.exam_type ? `<div class="exam-type">${escapeHtml(p.exam_type)}</div>` : ""}
+    <div class="tag-section">
+      <div class="label">単元</div>
+      <div class="tags" style="display:flex;flex-wrap:wrap;gap:4px">
+        ${(p.unit_tags || []).map(t => `<span class="tag">${escapeHtml(unitTagName(t))}</span>`).join("") || '<span style="color:var(--muted);font-size:12px">なし</span>'}
+      </div>
+    </div>
+    <div class="tag-section">
+      <div class="label">解法キー</div>
+      <div class="tags" style="display:flex;flex-wrap:wrap;gap:4px">
+        ${(p.method_tags || []).map(t => `<span class="tag method">${escapeHtml(methodTagName(t))}</span>`).join("") || '<span style="color:var(--muted);font-size:12px">なし</span>'}
+      </div>
+    </div>`;
+
+  renderVoteBox(p);
+  renderComments(p);
+}
+
+function renderVoteBox(p) {
+  const mine = myVoteFor(p.id);
+  const avg = avgDifficulty(p.id);
+  const nVotes = votesFor(p.id).length;
+
+  const wrap = $("#vote-stars");
+  wrap.innerHTML = "";
+  for (let i = 1; i <= 5; i++) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = "★";
+    b.setAttribute("aria-label", `難易度${i}で投票`);
+    if (mine !== null && i <= mine) b.classList.add("lit");
+    b.onclick = async () => {
+      try {
+        await api.upsertVote(p.id, i);
+        toast(mine === null ? "投票しました" : "投票を更新しました");
+        renderVoteBox(p);
+      } catch (e) {
+        toast("投票に失敗しました: " + (e.message || e));
+      }
+    };
+    wrap.appendChild(b);
+  }
+
+  $("#vote-status").innerHTML =
+    (avg === null
+      ? "まだ投票がありません。最初の投票をどうぞ。"
+      : `平均 ${starsHtml(avg)} <b>${avg.toFixed(1)}</b>(${nVotes}票)`) +
+    (mine !== null ? ` <span class="mine">/ あなたの投票: ★${mine}</span>` : "");
+}
+
+function renderComments(p) {
+  const listEl = $("#comment-list");
+  listEl.innerHTML = "";
+  const comments = visibleCommentsFor(p.id);
+  if (comments.length === 0) {
+    listEl.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:6px 0">まだコメントがありません。</div>`;
+  }
+  const reported = getReportedComments();
+  for (const c of comments) {
+    const div = document.createElement("div");
+    div.className = "comment";
+    const bodyEl = document.createElement("div");
+    bodyEl.className = "body";
+    bodyEl.textContent = c.body; // XSS対策: textContentで挿入($...$はMathJaxが処理)
+    const foot = document.createElement("div");
+    foot.className = "foot";
+    const already = reported.includes(c.id);
+    foot.innerHTML = `<span>${fmtDate(c.created_at)}</span>`;
+    const btn = document.createElement("button");
+    btn.className = "report-btn";
+    btn.textContent = already ? "通報済み" : "⚑ 通報";
+    btn.disabled = already;
+    btn.onclick = async () => {
+      if (!confirm("このコメントを通報しますか?")) return;
+      try {
+        await api.reportComment(c.id);
+        markReportedComment(c.id);
+        toast("通報しました");
+        renderComments(p);
+      } catch (e) {
+        toast("通報に失敗しました: " + (e.message || e));
+      }
+    };
+    foot.appendChild(btn);
+    div.appendChild(bodyEl);
+    div.appendChild(foot);
+    listEl.appendChild(div);
+  }
+  typeset(listEl);
+}
+
+function setupCommentForm() {
+  const input = $("#comment-input");
+  const counter = $("#comment-count");
+  input.addEventListener("input", () => {
+    const len = input.value.trim().length;
+    counter.textContent = `${len} / ${COMMENT_MAX_LENGTH}`;
+    counter.classList.toggle("over", len > COMMENT_MAX_LENGTH);
+  });
+  $("#comment-submit").onclick = async () => {
+    const body = input.value.trim();
+    if (!body) { toast("コメントを入力してください"); return; }
+    if (body.length > COMMENT_MAX_LENGTH) { toast(`コメントは${COMMENT_MAX_LENGTH}字以内です`); return; }
+    const p = state.problems.find(p => p.id === state.currentProblemId);
+    if (!p) return;
+    try {
+      await api.addComment(p.id, body);
+      input.value = "";
+      counter.textContent = `0 / ${COMMENT_MAX_LENGTH}`;
+      counter.classList.remove("over");
+      toast("投稿しました");
+      renderComments(p);
+    } catch (e) {
+      toast("投稿に失敗しました: " + (e.message || e));
+    }
+  };
+}
+
+/* =====================================================================
+ * 3. 管理画面
+ * =================================================================== */
+function renderAdmin() {
+  $("#admin-login").hidden = state.adminAuthed;
+  $("#admin-panel").hidden = !state.adminAuthed;
+  if (!state.adminAuthed) return;
+  renderAdminProblemForm();
+  renderAdminProblems();
+  renderAdminComments();
+}
+
+function renderAdminProblems() {
+  const wrap = $("#admin-problem-list");
+  wrap.innerHTML = "";
+  const list = [...state.problems].sort((a, b) =>
+    b.year - a.year || a.university.localeCompare(b.university, "ja") || a.question_no - b.question_no
+  );
+  for (const p of list) {
+    const row = document.createElement("div");
+    row.className = "admin-row";
+    row.innerHTML = `
+      <div class="row-head">
+        <div><b>${escapeHtml(problemTitle(p))}</b>${p.admin_note ? `<div class="c-body">メモ: ${escapeHtml(p.admin_note)}</div>` : ""}</div>
+        <div class="row-actions">
+          <button class="small edit-btn">編集</button>
+          <button class="small danger-btn del-btn">削除</button>
+        </div>
+      </div>`;
+    row.querySelector(".edit-btn").onclick = () => openProblemForm(p.id);
+    row.querySelector(".del-btn").onclick = async () => {
+      if (!confirm(`「${problemTitle(p)}」を削除しますか?\n投票・コメントも削除されます。`)) return;
+      try {
+        await api.deleteProblem(p.id);
+        toast("削除しました");
+        refreshAll();
+      } catch (e) {
+        toast("削除に失敗しました: " + (e.message || e));
+      }
+    };
+    wrap.appendChild(row);
+  }
+}
+
+function buildTagCheckboxes() {
+  const uWrap = $("#pf-unit-checks");
+  uWrap.innerHTML = "";
+  for (const t of UNIT_TAGS) {
+    const label = document.createElement("label");
+    label.innerHTML = `<input type="checkbox" data-kind="unit" value="${t.id}"> ${escapeHtml(t.name)}`;
+    uWrap.appendChild(label);
+  }
+  const mWrap = $("#pf-method-checks");
+  mWrap.innerHTML = "";
+  for (const g of METHOD_TAG_GROUPS) {
+    const head = document.createElement("div");
+    head.className = "group-head";
+    head.textContent = g;
+    mWrap.appendChild(head);
+    for (const t of METHOD_TAGS.filter(t => t.group === g)) {
+      const label = document.createElement("label");
+      label.innerHTML = `<input type="checkbox" data-kind="method" value="${t.id}"> ${escapeHtml(t.name)}`;
+      mWrap.appendChild(label);
+    }
+  }
+}
+
+function openProblemForm(problemId) {
+  state.editingProblemId = problemId; // 0 = 新規
+  const p = problemId ? state.problems.find(p => p.id === problemId) : null;
+  $("#pf-university").value = p ? p.university : "";
+  $("#pf-year").value = p ? p.year : "";
+  $("#pf-exam-type").value = p ? p.exam_type : "";
+  $("#pf-question-no").value = p ? p.question_no : "";
+  $("#pf-admin-note").value = p ? (p.admin_note || "") : "";
+  for (const cb of document.querySelectorAll('#pf-unit-checks input[type="checkbox"]')) {
+    cb.checked = !!p && (p.unit_tags || []).includes(Number(cb.value));
+  }
+  for (const cb of document.querySelectorAll('#pf-method-checks input[type="checkbox"]')) {
+    cb.checked = !!p && (p.method_tags || []).includes(Number(cb.value));
+  }
+  $("#problem-form-wrap").hidden = false;
+  $("#problem-form-wrap").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function renderAdminProblemForm() {
+  $("#problem-form-wrap").hidden = state.editingProblemId === null;
+}
+
+async function saveProblemForm() {
+  const university = $("#pf-university").value.trim();
+  const year = Number($("#pf-year").value);
+  const examType = $("#pf-exam-type").value.trim();
+  const questionNo = Number($("#pf-question-no").value);
+  if (!university || !year || !questionNo) {
+    toast("大学・年度・大問番号は必須です");
+    return;
+  }
+  const unitTags = [...document.querySelectorAll('#pf-unit-checks input:checked')].map(cb => Number(cb.value));
+  const methodTags = [...document.querySelectorAll('#pf-method-checks input:checked')].map(cb => Number(cb.value));
+  const fields = {
+    university,
+    year,
+    exam_type: examType,
+    question_no: questionNo,
+    unit_tags: unitTags,
+    method_tags: methodTags,
+    admin_note: $("#pf-admin-note").value.trim(),
+  };
+  try {
+    await api.saveProblem(fields, state.editingProblemId || null);
+    state.editingProblemId = null;
+    toast("保存しました");
+    refreshAll();
+  } catch (e) {
+    toast("保存に失敗しました: " + (e.message || e));
+  }
+}
+
+function renderAdminComments() {
+  const wrap = $("#admin-comment-list");
+  wrap.innerHTML = "";
+  const sortMode = $("#admin-comment-sort").value;
+  const list = [...state.comments].sort((a, b) =>
+    sortMode === "reported"
+      ? b.reported_count - a.reported_count || new Date(b.created_at) - new Date(a.created_at)
+      : new Date(b.created_at) - new Date(a.created_at)
+  );
+  if (list.length === 0) {
+    wrap.innerHTML = `<div style="color:var(--muted);font-size:13px">コメントはありません。</div>`;
+    return;
+  }
+  for (const c of list) {
+    const p = state.problems.find(p => p.id === c.problem_id);
+    const row = document.createElement("div");
+    row.className = "admin-row";
+    row.innerHTML = `
+      <div class="row-head">
+        <div>
+          <b>${escapeHtml(p ? problemTitle(p) : `問題#${c.problem_id}`)}</b>
+          ${c.reported_count > 0 ? `<span class="badge">通報 ${c.reported_count}</span>` : ""}
+          ${c.is_hidden ? `<span class="badge hidden-badge">非表示中</span>` : ""}
+        </div>
+        <div class="row-actions">
+          <button class="small toggle-btn">${c.is_hidden ? "再表示" : "非表示"}</button>
+        </div>
+      </div>
+      <div class="c-body"></div>
+      <div style="font-size:11px;color:var(--muted)">${fmtDate(c.created_at)} / ${escapeHtml(c.device_uuid.slice(0, 8))}…</div>`;
+    row.querySelector(".c-body").textContent = c.body;
+    row.querySelector(".toggle-btn").onclick = async () => {
+      try {
+        await api.setCommentHidden(c.id, !c.is_hidden);
+        toast(c.is_hidden ? "再表示しました" : "非表示にしました");
+        renderAdminComments();
+        renderList();
+      } catch (e) {
+        toast("更新に失敗しました: " + (e.message || e));
+      }
+    };
+    wrap.appendChild(row);
+  }
+}
+
+/* =====================================================================
+ * イベント配線・初期化
+ * =================================================================== */
+function refreshAll() {
+  buildFilterChips();
+  renderList();
+  if (!$("#view-detail").hidden) renderDetail();
+  if (!$("#view-admin").hidden) renderAdmin();
+}
+
+function setupEvents() {
+  $("#back-to-list").onclick = () => { renderList(); showView("list"); };
+  $("#year-from").addEventListener("input", e => {
+    state.filters.yearFrom = e.target.value ? Number(e.target.value) : null;
+    renderList();
+  });
+  $("#year-to").addEventListener("input", e => {
+    state.filters.yearTo = e.target.value ? Number(e.target.value) : null;
+    renderList();
+  });
+  $("#diff-band").addEventListener("change", e => {
+    state.filters.diffBand = e.target.value;
+    renderList();
+  });
+  $("#clear-filters").onclick = () => {
+    state.filters = { universities: [], yearFrom: null, yearTo: null, unitTags: [], methodTags: [], diffBand: "" };
+    $("#year-from").value = "";
+    $("#year-to").value = "";
+    $("#diff-band").value = "";
+    buildFilterChips();
+    renderList();
+  };
+
+  setupCommentForm();
+
+  // 管理画面
+  $("#admin-link").onclick = () => { showView("admin"); renderAdmin(); };
+  $("#admin-back").onclick = () => { renderList(); showView("list"); };
+  $("#admin-login-btn").onclick = () => {
+    if ($("#admin-password").value === ADMIN_PASSWORD) {
+      state.adminAuthed = true;
+      $("#admin-password").value = "";
+      renderAdmin();
+    } else {
+      toast("パスワードが違います");
+    }
+  };
+  $("#admin-password").addEventListener("keydown", e => {
+    if (e.key === "Enter") $("#admin-login-btn").click();
+  });
+  $("#problem-new-btn").onclick = () => openProblemForm(0);
+  $("#pf-save").onclick = saveProblemForm;
+  $("#pf-cancel").onclick = () => {
+    state.editingProblemId = null;
+    $("#problem-form-wrap").hidden = true;
+  };
+  $("#admin-comment-sort").addEventListener("change", renderAdminComments);
+}
+
+async function init() {
+  $("#demo-banner").hidden = isSupabaseConfigured;
+  buildTagCheckboxes();
+  setupEvents();
+  try {
+    await api.loadAll();
+  } catch (e) {
+    toast("データの読み込みに失敗しました: " + (e.message || e));
+  }
+  buildFilterChips();
+  renderList();
+}
+
+init();
+</script>
+</body>
+</html>
