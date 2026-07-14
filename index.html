@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0f1115">
+<meta name="theme-color" content="#faf7f0">
 <title>入試数学 過去問DB</title>
 <script>
 window.MathJax = {
@@ -15,18 +15,18 @@ window.MathJax = {
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
-  --bg: #0f1115;
-  --bg2: #151821;
-  --card: #1b1f2a;
-  --card2: #222736;
-  --border: #2b3140;
-  --text: #e8eaf0;
-  --muted: #98a1b3;
-  --accent: #5b8cff;
-  --accent-dim: #2c4482;
-  --star: #f5b942;
-  --danger: #e5534b;
-  --ok: #3fb27f;
+  --bg: #faf7f0;
+  --bg2: #f3eee2;
+  --card: #ffffff;
+  --card2: #f5f1e6;
+  --border: #e2dccc;
+  --text: #2c2e36;
+  --muted: #6f7482;
+  --accent: #3565c9;
+  --accent-dim: #dfe8fa;
+  --star: #e59f2b;
+  --danger: #c9433c;
+  --ok: #1f8f5c;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
@@ -50,9 +50,9 @@ header.site h1 { font-size: 18px; margin: 0; letter-spacing: .02em; }
 header.site h1 .accent { color: var(--accent); }
 header.site .sub { color: var(--muted); font-size: 12px; }
 .demo-banner {
-  background: #3a2f1a;
-  border: 1px solid #6b5619;
-  color: #f0d489;
+  background: #fdf3d3;
+  border: 1px solid #e4cd85;
+  color: #7a5d10;
   border-radius: 8px;
   padding: 8px 12px;
   font-size: 12.5px;
@@ -74,7 +74,7 @@ button {
 }
 button:active { opacity: .8; }
 button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
-button.danger-btn { color: var(--danger); border-color: #59333a; }
+button.danger-btn { color: var(--danger); border-color: #e8c4c1; }
 button.ghost { background: transparent; }
 button.small { padding: 4px 10px; font-size: 12.5px; border-radius: 6px; }
 .chip {
@@ -89,7 +89,7 @@ button.small { padding: 4px 10px; font-size: 12.5px; border-radius: 6px; }
   user-select: none;
   -webkit-user-select: none;
 }
-.chip.on { background: var(--accent-dim); border-color: var(--accent); color: #dbe6ff; }
+.chip.on { background: var(--accent-dim); border-color: var(--accent); color: #24478f; }
 .chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
 
 /* ---------- filters ---------- */
@@ -158,11 +158,11 @@ textarea { resize: vertical; }
   font-size: 11px;
   padding: 2px 8px;
   border-radius: 999px;
-  background: #253048;
-  color: #a9c1f0;
+  background: #e4ebfa;
+  color: #35589f;
   white-space: nowrap;
 }
-.tag.method { background: #203a30; color: #93d7b4; }
+.tag.method { background: #ddf0e4; color: #1f7a4d; }
 .card .stats { display: flex; gap: 14px; font-size: 12.5px; color: var(--muted); align-items: center; flex-wrap: wrap; }
 .stars { color: var(--star); letter-spacing: 1px; }
 .empty-state {
@@ -202,7 +202,7 @@ textarea { resize: vertical; }
   padding: 6px 8px;
   background: transparent;
   border: none;
-  color: #4a5164;
+  color: #d5cfbf;
 }
 .vote-stars button.lit { color: var(--star); }
 .vote-status { font-size: 12.5px; color: var(--muted); }
@@ -245,10 +245,10 @@ textarea { resize: vertical; }
   font-size: 11px;
   border-radius: 999px;
   padding: 1px 8px;
-  background: #3a2328;
-  color: #f0a0a0;
+  background: #fbe3e1;
+  color: #b03a33;
 }
-.admin-row .badge.hidden-badge { background: #3a3a3a; color: #ccc; }
+.admin-row .badge.hidden-badge { background: #e9e6dd; color: #6f7482; }
 .form-grid { display: flex; flex-direction: column; gap: 10px; }
 .form-grid label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 3px; }
 .form-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -274,13 +274,13 @@ footer.site {
   margin-top: 40px;
   padding: 16px 2px;
   text-align: center;
-  color: #4a5164;
+  color: #a8a294;
   font-size: 11px;
 }
 footer.site .admin-link {
   background: none;
   border: none;
-  color: #3a4152;
+  color: #bcb6a6;
   font-size: 11px;
   padding: 4px;
   text-decoration: underline;
@@ -290,12 +290,12 @@ footer.site .admin-link {
   left: 50%;
   bottom: calc(28px + env(safe-area-inset-bottom));
   transform: translateX(-50%);
-  background: #2b3140;
-  color: var(--text);
+  background: #35373f;
+  color: #f5f4f0;
   border-radius: 999px;
   padding: 9px 18px;
   font-size: 13px;
-  box-shadow: 0 4px 16px rgba(0,0,0,.4);
+  box-shadow: 0 4px 16px rgba(0,0,0,.18);
   opacity: 0;
   pointer-events: none;
   transition: opacity .2s;
