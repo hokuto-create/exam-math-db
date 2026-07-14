@@ -92,6 +92,56 @@ button.small { padding: 4px 10px; font-size: 12.5px; border-radius: 6px; }
 .chip.on { background: var(--accent-dim); border-color: var(--accent); color: #24478f; }
 .chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
 
+/* ---------- mode tabs ---------- */
+.mode-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 4px;
+  margin-bottom: 14px;
+}
+.mode-tab {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 8px 6px;
+  border-radius: 7px;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 13.5px;
+}
+.mode-tab.active { background: var(--card); color: var(--accent); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.mode-tabs[hidden] { display: none; }
+
+/* ---------- archive (university -> year -> question) ---------- */
+.uni-card .meta { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+.uni-head {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+.uni-head h2 { margin: 0; font-size: 18px; }
+.uni-head .meta { color: var(--muted); font-size: 12.5px; }
+.exam-group { margin-bottom: 18px; }
+.exam-group h3 { margin: 0 0 6px 2px; font-size: 13px; color: var(--muted); font-weight: 600; }
+.prow {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  cursor: pointer;
+}
+.prow:active { background: var(--card2); }
+.prow .head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.prow .qno { font-weight: 700; color: var(--accent); }
+.prow .stats { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.prow .tags { margin-top: 5px; display: flex; flex-wrap: wrap; gap: 4px; }
+
 /* ---------- filters ---------- */
 details.filters {
   background: var(--bg2);
@@ -314,14 +364,31 @@ footer.site .admin-link {
 <div id="app">
   <header class="site">
     <h1>入試数学 <span class="accent">過去問DB</span></h1>
-    <span class="sub">単元×解法で探す大学入試数学</span>
+    <span class="sub">大学入試数学の過去問データベース</span>
   </header>
   <div id="demo-banner" class="demo-banner" hidden>
     デモモード(Supabase未接続)— サンプルデータを表示中。投票・コメント等の変更は保存されません。
   </div>
 
-  <!-- ========== 1. 一覧+絞り込み ========== -->
-  <section id="view-list" class="view">
+  <nav id="mode-tabs" class="mode-tabs">
+    <button id="tab-browse" class="mode-tab active">過去問アーカイブ</button>
+    <button id="tab-search" class="mode-tab">タグで探す</button>
+  </nav>
+
+  <!-- ========== 1. 過去問アーカイブ(メイン): 大学一覧 ========== -->
+  <section id="view-browse" class="view">
+    <div id="uni-index"></div>
+  </section>
+
+  <!-- ========== 1b. 大学ページ: 年度×試験区分ごとの大問一覧 ========== -->
+  <section id="view-uni" class="view" hidden>
+    <div class="back-row"><button id="uni-back" class="small ghost">← 大学一覧へ</button></div>
+    <div id="uni-head" class="uni-head"></div>
+    <div id="uni-exams"></div>
+  </section>
+
+  <!-- ========== 2. タグ検索(辞書的な逆引き) ========== -->
+  <section id="view-list" class="view" hidden>
     <details class="filters" open>
       <summary>絞り込み</summary>
       <div class="filter-body">
@@ -371,9 +438,9 @@ footer.site .admin-link {
     <div id="result-list"></div>
   </section>
 
-  <!-- ========== 2. 問題詳細 ========== -->
+  <!-- ========== 3. 問題詳細 ========== -->
   <section id="view-detail" class="view" hidden>
-    <div class="back-row"><button id="back-to-list" class="small ghost">← 一覧へ戻る</button></div>
+    <div class="back-row"><button id="back-to-list" class="small ghost">← 戻る</button></div>
     <div id="detail-head" class="detail-head"></div>
     <div class="vote-box">
       <h3>難易度投票</h3>
@@ -393,9 +460,9 @@ footer.site .admin-link {
     </div>
   </section>
 
-  <!-- ========== 3. 管理画面 ========== -->
+  <!-- ========== 4. 管理画面 ========== -->
   <section id="view-admin" class="view" hidden>
-    <div class="back-row"><button id="admin-back" class="small ghost">← 一覧へ戻る</button></div>
+    <div class="back-row"><button id="admin-back" class="small ghost">← 戻る</button></div>
     <div id="admin-login" class="admin-login">
       <h2>管理画面</h2>
       <input id="admin-password" type="password" placeholder="パスワード" autocomplete="off">
@@ -530,6 +597,21 @@ const METHOD_TAGS = [
   { id: 36, group: "確率・場合の数", name: "場合分けの設計" },
 ];
 
+// アーカイブの大学表示順。ここに載っていない大学は末尾に五十音順で並ぶ
+const UNIVERSITY_ORDER = [
+  "東京大学",
+  "京都大学",
+  "東京科学大学",
+  "一橋大学",
+  "北海道大学",
+  "東北大学",
+  "名古屋大学",
+  "大阪大学",
+  "九州大学",
+  "慶應義塾大学",
+  "早稲田大学",
+];
+
 const METHOD_TAG_GROUPS = [...new Set(METHOD_TAGS.map(t => t.group))];
 const unitTagName = id => (UNIT_TAGS.find(t => t.id === id) || { name: "?" }).name;
 const methodTagName = id => (METHOD_TAGS.find(t => t.id === id) || { name: "?" }).name;
@@ -545,7 +627,7 @@ const SAMPLE_DATA = {
     { id: 4, university: "京都大学", year: 2026, exam_type: "前期理系", question_no: 2, unit_tags: [18], method_tags: [22, 26], admin_note: "" },
     { id: 5, university: "京都大学", year: 2025, exam_type: "前期理系", question_no: 6, unit_tags: [7, 15], method_tags: [1, 6, 11], admin_note: "" },
     { id: 6, university: "東北大学", year: 2026, exam_type: "前期理系", question_no: 5, unit_tags: [19], method_tags: [23, 3], admin_note: "" },
-    { id: 7, university: "東京工業大学", year: 2025, exam_type: "", question_no: 2, unit_tags: [23, 24], method_tags: [15, 29], admin_note: "" },
+    { id: 7, university: "東京科学大学", year: 2025, exam_type: "", question_no: 2, unit_tags: [23, 24], method_tags: [15, 29], admin_note: "" },
     { id: 8, university: "早稲田大学", year: 2026, exam_type: "理工", question_no: 3, unit_tags: [5], method_tags: [34, 36], admin_note: "" },
     { id: 9, university: "大阪大学", year: 2024, exam_type: "前期理系", question_no: 1, unit_tags: [21, 22], method_tags: [28, 29], admin_note: "" },
     { id: 10, university: "一橋大学", year: 2026, exam_type: "", question_no: 2, unit_tags: [7], method_tags: [13, 12], admin_note: "" },
@@ -761,7 +843,9 @@ const state = {
     methodTags: [],
     diffBand: "",
   },
+  currentUniversity: null,
   currentProblemId: null,
+  detailReturn: "browse", // 詳細画面の戻り先: "uni" | "list" | "browse"
   adminAuthed: false,
   editingProblemId: null, // null=フォーム非表示, 0=新規, >0=編集
 };
@@ -806,14 +890,113 @@ function problemTitle(p) {
  * 画面切替
  * =================================================================== */
 function showView(name) {
-  for (const id of ["view-list", "view-detail", "view-admin"]) {
+  for (const id of ["view-browse", "view-uni", "view-list", "view-detail", "view-admin"]) {
     document.getElementById(id).hidden = id !== `view-${name}`;
   }
+  $("#mode-tabs").hidden = !(name === "browse" || name === "list");
+  $("#tab-browse").classList.toggle("active", name === "browse");
+  $("#tab-search").classList.toggle("active", name === "list");
   window.scrollTo(0, 0);
 }
 
 /* =====================================================================
- * 1. 一覧+絞り込み
+ * 1. 過去問アーカイブ(メイン): 大学 → 年度×試験区分 → 大問
+ * =================================================================== */
+function universityRank(u) {
+  const i = UNIVERSITY_ORDER.indexOf(u);
+  return i < 0 ? UNIVERSITY_ORDER.length : i;
+}
+
+function renderBrowse() {
+  const wrap = $("#uni-index");
+  wrap.innerHTML = "";
+  const universities = [...new Set(state.problems.map(p => p.university))]
+    .sort((a, b) => universityRank(a) - universityRank(b) || a.localeCompare(b, "ja"));
+  if (universities.length === 0) {
+    wrap.innerHTML = `
+      <div class="empty-state">
+        <div class="big">📚</div>
+        <div>まだ問題が登録されていません。</div>
+      </div>`;
+    return;
+  }
+  for (const u of universities) {
+    const probs = state.problems.filter(p => p.university === u);
+    const years = probs.map(p => p.year);
+    const yMin = Math.min(...years), yMax = Math.max(...years);
+    const card = document.createElement("div");
+    card.className = "card uni-card";
+    card.innerHTML = `
+      <div class="title">${escapeHtml(u)}</div>
+      <div class="meta">${yMin === yMax ? `${yMax}年度` : `${yMin}〜${yMax}年度`} ・ ${probs.length}問収録</div>`;
+    card.onclick = () => openUniversity(u);
+    wrap.appendChild(card);
+  }
+}
+
+function openUniversity(u) {
+  state.currentUniversity = u;
+  if (!renderUniversity()) {
+    renderBrowse();
+    showView("browse");
+    return;
+  }
+  showView("uni");
+}
+
+// 対象大学の問題が無ければ false(呼び出し側で大学一覧へ戻す)
+function renderUniversity() {
+  const u = state.currentUniversity;
+  const probs = state.problems.filter(p => p.university === u);
+  if (probs.length === 0) return false;
+
+  $("#uni-head").innerHTML = `
+    <h2>${escapeHtml(u)}</h2>
+    <div class="meta">${probs.length}問収録</div>`;
+
+  const wrap = $("#uni-exams");
+  wrap.innerHTML = "";
+  // 年度(降順)→試験区分ごとにグループ化して大問を並べる
+  const examKeys = [...new Set(probs.map(p => `${p.year}\t${p.exam_type || ""}`))]
+    .sort((a, b) => {
+      const [ya, ta] = a.split("\t"), [yb, tb] = b.split("\t");
+      return yb - ya || ta.localeCompare(tb, "ja");
+    });
+  for (const key of examKeys) {
+    const [yearStr, examType] = key.split("\t");
+    const group = probs
+      .filter(p => p.year === Number(yearStr) && (p.exam_type || "") === examType)
+      .sort((a, b) => a.question_no - b.question_no);
+    const sec = document.createElement("div");
+    sec.className = "exam-group";
+    const h = document.createElement("h3");
+    h.textContent = `${yearStr}年度${examType ? " " + examType : ""}`;
+    sec.appendChild(h);
+    for (const p of group) {
+      const avg = avgDifficulty(p.id);
+      const nVotes = votesFor(p.id).length;
+      const nComments = visibleCommentsFor(p.id).length;
+      const row = document.createElement("div");
+      row.className = "prow";
+      row.innerHTML = `
+        <div class="head">
+          <span class="qno">第${p.question_no}問</span>
+          <span class="stats">${avg === null ? "難易度 未投票" : `${starsHtml(avg)} ${avg.toFixed(1)}(${nVotes}票)`} ・ 💬 ${nComments}</span>
+        </div>
+        <div class="tags">
+          ${(p.unit_tags || []).map(t => `<span class="tag">${escapeHtml(unitTagName(t))}</span>`).join("")}
+          ${(p.method_tags || []).map(t => `<span class="tag method">${escapeHtml(methodTagName(t))}</span>`).join("")}
+        </div>`;
+      row.onclick = () => openDetail(p.id, "uni");
+      sec.appendChild(row);
+    }
+    wrap.appendChild(sec);
+  }
+  return true;
+}
+
+/* =====================================================================
+ * 2. タグ検索(辞書的な逆引き)
  * =================================================================== */
 // トグル式チップを1つ作って追加する(value は selected 配列に出入りする)
 function appendToggleChip(wrap, label, value, selected) {
@@ -936,23 +1119,36 @@ function renderList() {
         <span>${avg === null ? "難易度 未投票" : `${starsHtml(avg)} ${avg.toFixed(1)}(${nVotes}票)`}</span>
         <span>💬 ${nComments}</span>
       </div>`;
-    card.onclick = () => openDetail(p.id);
+    card.onclick = () => openDetail(p.id, "list");
     wrap.appendChild(card);
   }
 }
 
 /* =====================================================================
- * 2. 問題詳細
+ * 3. 問題詳細
  * =================================================================== */
-function openDetail(problemId) {
+function openDetail(problemId, from) {
   state.currentProblemId = problemId;
+  state.detailReturn = from || "list";
   renderDetail();
   showView("detail");
 }
 
+function goBackFromDetail() {
+  if (state.detailReturn === "uni" && state.currentUniversity != null) {
+    openUniversity(state.currentUniversity);
+  } else if (state.detailReturn === "list") {
+    renderList();
+    showView("list");
+  } else {
+    renderBrowse();
+    showView("browse");
+  }
+}
+
 function renderDetail() {
   const p = state.problems.find(p => p.id === state.currentProblemId);
-  if (!p) { showView("list"); return; }
+  if (!p) { goBackFromDetail(); return; }
 
   $("#detail-head").innerHTML = `
     <h2>${escapeHtml(p.university)} ${p.year} <span style="color:var(--accent)">第${p.question_no}問</span></h2>
@@ -1075,7 +1271,7 @@ function setupCommentForm() {
 }
 
 /* =====================================================================
- * 3. 管理画面
+ * 4. 管理画面
  * =================================================================== */
 function renderAdmin() {
   $("#admin-login").hidden = state.adminAuthed;
@@ -1243,13 +1439,21 @@ function renderAdminComments() {
  * =================================================================== */
 function refreshAll() {
   buildFilterChips();
+  renderBrowse();
   renderList();
+  if (!$("#view-uni").hidden && !renderUniversity()) {
+    renderBrowse();
+    showView("browse");
+  }
   if (!$("#view-detail").hidden) renderDetail();
   if (!$("#view-admin").hidden) renderAdmin();
 }
 
 function setupEvents() {
-  $("#back-to-list").onclick = () => { renderList(); showView("list"); };
+  $("#tab-browse").onclick = () => { renderBrowse(); showView("browse"); };
+  $("#tab-search").onclick = () => { renderList(); showView("list"); };
+  $("#uni-back").onclick = () => { renderBrowse(); showView("browse"); };
+  $("#back-to-list").onclick = goBackFromDetail;
   $("#year-from").addEventListener("input", e => {
     state.filters.yearFrom = e.target.value ? Number(e.target.value) : null;
     renderList();
@@ -1275,7 +1479,7 @@ function setupEvents() {
 
   // 管理画面
   $("#admin-link").onclick = () => { showView("admin"); renderAdmin(); };
-  $("#admin-back").onclick = () => { renderList(); showView("list"); };
+  $("#admin-back").onclick = () => { renderBrowse(); showView("browse"); };
   $("#admin-login-btn").onclick = () => {
     if ($("#admin-password").value === ADMIN_PASSWORD) {
       state.adminAuthed = true;
@@ -1307,7 +1511,9 @@ async function init() {
     toast("データの読み込みに失敗しました: " + (e.message || e));
   }
   buildFilterChips();
+  renderBrowse();
   renderList();
+  showView("browse");
 }
 
 init();
