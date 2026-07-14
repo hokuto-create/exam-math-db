@@ -54,14 +54,18 @@ end $$;
 -- 問題データ
 -- 形式: (大学, 年度, 試験区分, 大問番号, 単元タグID配列, 解法タグID配列, 管理メモ)
 -- =====================================================================
--- ↓データが入り次第、この insert のコメントを外して行を追記していく
--- insert into problems
---   (university, year, exam_type, question_no, unit_tags, method_tags, admin_note)
--- values
---   ('東京大学', 2025, '前期理系', 1, '{23}', '{30,27}', ''),
---   ('東京大学', 2025, '前期理系', 2, '{5}',  '{34,36}', '')
--- on conflict (university, year, exam_type, question_no)
--- do update set
---   unit_tags   = excluded.unit_tags,
---   method_tags = excluded.method_tags,
---   admin_note  = excluded.admin_note;
+insert into problems
+  (university, year, exam_type, question_no, unit_tags, method_tags, admin_note)
+values
+  -- ---- 東京大学 2026 前期理系(数学・理科)----
+  ('東京大学', 2026, '前期理系', 1, '{22,23}', '{29,30,33}', 'sinθ-θ+θ^3/6 の最大最小から ∫sin(cosx-x)dx を評価'),
+  ('東京大学', 2026, '前期理系', 2, '{5,4}',   '{34,36}',    '3×n の格子点から選んだ3点が三角形をなす確率 p_n'),
+  ('東京大学', 2026, '前期理系', 3, '{18,10}', '{22,18}',    '球面上の3点と重心固定条件。PQ中点の軌跡と線分PQの通過範囲の図示'),
+  ('東京大学', 2026, '前期理系', 4, '{13,10}', '{18,29}',    'y=x^3-kx の3接線(O,P,Q)がどの2本もなす角 π/3。kの範囲と三角形の面積'),
+  ('東京大学', 2026, '前期理系', 5, '{19}',    '{23,18}',    'w=(z-α)^3 による単位円の像。偏角の範囲と条件を満たす α の範囲の面積'),
+  ('東京大学', 2026, '前期理系', 6, '{7}',     '{11,12}',    '約数を mod 3 で分類した個数 f(n), g(n)。f(n)≧g(n) の証明など')
+on conflict (university, year, exam_type, question_no)
+do update set
+  unit_tags   = excluded.unit_tags,
+  method_tags = excluded.method_tags,
+  admin_note  = excluded.admin_note;
