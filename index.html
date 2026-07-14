@@ -237,14 +237,20 @@ textarea { resize: vertical; }
 .detail-head .exam-type { color: var(--muted); font-size: 13px; }
 .tag-section { margin-top: 10px; }
 .tag-section .label { font-size: 11.5px; color: var(--muted); margin-bottom: 3px; }
-.vote-box, .comments-box {
+.vote-box, .comments-box, .problem-box {
   background: var(--bg2);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 14px;
   margin-bottom: 12px;
 }
-.vote-box h3, .comments-box h3 { margin: 0 0 8px; font-size: 14px; }
+.vote-box h3, .comments-box h3, .problem-box h3 { margin: 0 0 8px; font-size: 14px; }
+.problem-box .problem-text {
+  font-size: 14px;
+  line-height: 1.9;
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
 .vote-stars { display: flex; gap: 4px; margin: 6px 0 8px; }
 .vote-stars button {
   font-size: 26px;
@@ -442,6 +448,10 @@ footer.site .admin-link {
   <section id="view-detail" class="view" hidden>
     <div class="back-row"><button id="back-to-list" class="small ghost">← 戻る</button></div>
     <div id="detail-head" class="detail-head"></div>
+    <div id="problem-box" class="problem-box" hidden>
+      <h3>問題文</h3>
+      <div id="problem-text" class="problem-text"></div>
+    </div>
     <div class="vote-box">
       <h3>難易度投票</h3>
       <div id="vote-stars" class="vote-stars"></div>
@@ -483,6 +493,7 @@ footer.site .admin-link {
             <div><label>試験区分(任意)</label><input id="pf-exam-type" type="text" placeholder="前期理系"></div>
             <div><label>大問番号</label><input id="pf-question-no" type="number" inputmode="numeric" placeholder="1"></div>
           </div>
+          <div><label>問題文(任意・数式は $x^2$ のように囲む)</label><textarea id="pf-problem-text" rows="6" placeholder="掲載許諾の状況を確認の上で入力してください"></textarea></div>
           <div><label>単元タグ</label><div id="pf-unit-checks" class="checkbox-grid"></div></div>
           <div><label>解法タグ</label><div id="pf-method-checks" class="checkbox-grid"></div></div>
           <div><label>管理者メモ(任意)</label><textarea id="pf-admin-note" rows="2"></textarea></div>
@@ -505,7 +516,7 @@ footer.site .admin-link {
   </section>
 
   <footer class="site">
-    <div>入試数学 過去問DB — 問題文・解説は掲載していません</div>
+    <div>入試数学 過去問DB — 解説は掲載していません</div>
     <button id="admin-link" class="admin-link">管理</button>
   </footer>
 </div>
@@ -629,7 +640,7 @@ const SAMPLE_DATA = {
     { id: 5, university: "東京大学", year: 2026, exam_type: "前期理系", question_no: 5, unit_tags: [19], method_tags: [23, 18], admin_note: "w=(z-α)^3 による単位円の像。偏角の範囲と条件を満たす α の範囲の面積" },
     { id: 6, university: "東京大学", year: 2026, exam_type: "前期理系", question_no: 6, unit_tags: [7], method_tags: [11, 12], admin_note: "約数を mod 3 で分類した個数 f(n), g(n)。f(n)≧g(n) の証明など" },
     // ---- 以下はデモ用のダミーデータ(実データが入り次第差し替える)----
-    { id: 7, university: "東京大学", year: 2025, exam_type: "前期理系", question_no: 3, unit_tags: [6], method_tags: [32, 36], admin_note: "" },
+    { id: 7, university: "東京大学", year: 2025, exam_type: "前期理系", question_no: 3, unit_tags: [6], method_tags: [32, 36], admin_note: "", problem_text: "(問題文表示のデモ用サンプル。実際の出題とは異なります)\n1個のさいころを $n$ 回投げ、1の目が偶数回(0回を含む)出る確率を $p_n$ とする。\n(1) $p_{n+1}$ を $p_n$ を用いて表せ。\n(2) $p_n$ を求めよ。" },
     { id: 8, university: "京都大学", year: 2026, exam_type: "前期理系", question_no: 2, unit_tags: [18], method_tags: [22, 26], admin_note: "" },
     { id: 9, university: "京都大学", year: 2025, exam_type: "前期理系", question_no: 6, unit_tags: [7, 15], method_tags: [1, 6, 11], admin_note: "" },
     { id: 10, university: "東北大学", year: 2026, exam_type: "前期理系", question_no: 5, unit_tags: [19], method_tags: [23, 3], admin_note: "" },
@@ -1176,6 +1187,14 @@ function renderDetail() {
       </div>
     </div>`;
 
+  const text = (p.problem_text || "").trim();
+  $("#problem-box").hidden = !text;
+  if (text) {
+    const el = $("#problem-text");
+    el.innerHTML = escapeHtml(text); // XSS対策。$...$ はエスケープ後もMathJaxが処理する
+    typeset(el);
+  }
+
   renderVoteBox(p);
   renderComments(p);
 }
@@ -1354,6 +1373,7 @@ function openProblemForm(problemId) {
   $("#pf-year").value = p ? p.year : "";
   $("#pf-exam-type").value = p ? p.exam_type : "";
   $("#pf-question-no").value = p ? p.question_no : "";
+  $("#pf-problem-text").value = p ? (p.problem_text || "") : "";
   $("#pf-admin-note").value = p ? (p.admin_note || "") : "";
   for (const cb of document.querySelectorAll('#pf-unit-checks input[type="checkbox"]')) {
     cb.checked = !!p && (p.unit_tags || []).includes(Number(cb.value));
@@ -1387,6 +1407,7 @@ async function saveProblemForm() {
     question_no: questionNo,
     unit_tags: unitTags,
     method_tags: methodTags,
+    problem_text: $("#pf-problem-text").value.trim() || null,
     admin_note: $("#pf-admin-note").value.trim(),
   };
   try {

@@ -6,7 +6,7 @@
 
 - ユーザーは各問題の難易度(★1〜5)を投票できる(同一端末は上書き)
 - 各問題に講評コメントを書き込める(MathJax対応、`$...$` で数式)
-- **問題文・解説は掲載しない**(著作権許諾フェーズ以降の課題)
+- 問題文は `problems.problem_text` に格納でき、詳細画面に表示される(MathJax対応)。**問題文の著作権は大学等にあり、掲載の可否は許諾状況を確認の上で運用者が判断する**(Claude は許諾のない問題文の転記は行わない)。解説は掲載しない
 
 ## アーキテクチャ
 
@@ -37,6 +37,7 @@ create table problems (
   question_no int  not null,                -- 大問番号
   unit_tags   int[] not null default '{}',  -- UNIT_TAGS のID配列
   method_tags int[] not null default '{}',  -- METHOD_TAGS のID配列
+  problem_text text,                        -- 問題文(任意。掲載は許諾状況を確認の上で)
   admin_note  text,                         -- 管理者メモ(任意)
   created_at  timestamptz not null default now()
 );
@@ -158,6 +159,7 @@ create policy "comments_anon_hide_TEMP" on comments
 ### 3. 問題詳細
 
 - 基本情報とタグ一覧。戻るボタンは遷移元(アーカイブの大学ページ/タグ検索)へ戻す
+- 問題文: `problem_text` があれば「問題文」ボックスに表示(HTMLエスケープ+改行保持、MathJax対応)。空なら非表示
 - 難易度投票: ★1〜5タップで投票。`device_uuid`(localStorage、初回 `crypto.randomUUID()` 生成)で upsert。自分の投票済み状態を表示
 - コメント: 投稿フォーム(500字制限・トリムのみ、プレビューなし)、一覧は新着順、MathJax対応
 - 各コメントに通報ボタン(確認ダイアログ → `report_comment` RPC)。通報済みIDはlocalStorageに記録し連打防止
@@ -166,7 +168,7 @@ create policy "comments_anon_hide_TEMP" on comments
 ### 4. 管理画面(パスワード保護)
 
 - 入口はフッターの目立たないリンク。パスワードはJS内定数 `ADMIN_PASSWORD`(プレースホルダ)との簡易照合(**セキュリティ機構ではなくUIゲート**。本命はRLS側)
-- 問題の新規登録・編集・削除(タグはチェックボックスで選択)
+- 問題の新規登録・編集・削除(タグはチェックボックスで選択、問題文はテキストエリアで入力)
 - コメント管理: 全コメント一覧(通報数順/新着順ソート)、`is_hidden` トグル
 
 ## コーディング規約
@@ -182,8 +184,8 @@ create policy "comments_anon_hide_TEMP" on comments
 
 ## 今後のロードマップ
 
-1. **フェーズ1(現在)**: メタデータDBとして運用。問題文・解説は載せない
-2. 問題文・解説の掲載 — 大学/予備校等との**著作権許諾が取れてから**
+1. **フェーズ1(現在)**: メタデータDBとして運用。問題文の表示機能は実装済みだが、データ投入は許諾状況の確認を前提とする
+2. 問題文・解説の本格掲載 — 大学/予備校等との**著作権許諾が取れてから**
 3. AdSense等の収益化 — コンテンツ(レコード数・コメント)が十分蓄積してから
 4. 管理画面の本格認証(Supabase Auth / Edge Function)への移行
 5. 理科(物理・化学)への拡張構想 — テーブル・タグ体系を科目ごとに分離して横展開
