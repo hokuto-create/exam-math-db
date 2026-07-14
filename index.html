@@ -597,6 +597,17 @@ const METHOD_TAGS = [
   { id: 36, group: "確率・場合の数", name: "場合分けの設計" },
 ];
 
+// アーカイブの大学表示順。ここに載っていない大学は末尾に五十音順で並ぶ
+const UNIVERSITY_ORDER = [
+  "東京大学",
+  "京都大学",
+  "北海道大学",
+  "東北大学",
+  "名古屋大学",
+  "大阪大学",
+  "九州大学",
+];
+
 const METHOD_TAG_GROUPS = [...new Set(METHOD_TAGS.map(t => t.group))];
 const unitTagName = id => (UNIT_TAGS.find(t => t.id === id) || { name: "?" }).name;
 const methodTagName = id => (METHOD_TAGS.find(t => t.id === id) || { name: "?" }).name;
@@ -887,10 +898,16 @@ function showView(name) {
 /* =====================================================================
  * 1. 過去問アーカイブ(メイン): 大学 → 年度×試験区分 → 大問
  * =================================================================== */
+function universityRank(u) {
+  const i = UNIVERSITY_ORDER.indexOf(u);
+  return i < 0 ? UNIVERSITY_ORDER.length : i;
+}
+
 function renderBrowse() {
   const wrap = $("#uni-index");
   wrap.innerHTML = "";
-  const universities = [...new Set(state.problems.map(p => p.university))].sort((a, b) => a.localeCompare(b, "ja"));
+  const universities = [...new Set(state.problems.map(p => p.university))]
+    .sort((a, b) => universityRank(a) - universityRank(b) || a.localeCompare(b, "ja"));
   if (universities.length === 0) {
     wrap.innerHTML = `
       <div class="empty-state">
