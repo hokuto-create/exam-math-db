@@ -330,11 +330,19 @@ footer.site .admin-link {
           <div id="university-chips" class="chip-row"></div>
         </div>
         <div class="filter-group">
+          <h3>学部・試験区分</h3>
+          <div id="examtype-chips" class="chip-row"></div>
+        </div>
+        <div class="filter-group">
           <h3>年度</h3>
           <div class="year-range">
             <input id="year-from" type="number" inputmode="numeric" placeholder="1990"> 〜
             <input id="year-to" type="number" inputmode="numeric" placeholder="2026">
           </div>
+        </div>
+        <div class="filter-group">
+          <h3>大問番号</h3>
+          <div id="qno-chips" class="chip-row"></div>
         </div>
         <div class="filter-group">
           <h3>単元タグ(OR)</h3>
@@ -745,8 +753,10 @@ const state = {
   comments: [],
   filters: {
     universities: [],
+    examTypes: [],
     yearFrom: null,
     yearTo: null,
+    questionNos: [],
     unitTags: [],
     methodTags: [],
     diffBand: "",
@@ -805,6 +815,20 @@ function showView(name) {
 /* =====================================================================
  * 1. 一覧+絞り込み
  * =================================================================== */
+// トグル式チップを1つ作って追加する(value は selected 配列に出入りする)
+function appendToggleChip(wrap, label, value, selected) {
+  const chip = document.createElement("span");
+  chip.className = "chip" + (selected.includes(value) ? " on" : "");
+  chip.textContent = label;
+  chip.onclick = () => {
+    const i = selected.indexOf(value);
+    i >= 0 ? selected.splice(i, 1) : selected.push(value);
+    chip.classList.toggle("on");
+    renderList();
+  };
+  wrap.appendChild(chip);
+}
+
 function buildFilterChips() {
   // 大学(データから動的生成、既存の選択は維持)
   const universities = [...new Set(state.problems.map(p => p.university))].sort((a, b) => a.localeCompare(b, "ja"));
@@ -812,34 +836,32 @@ function buildFilterChips() {
   const uWrap = $("#university-chips");
   uWrap.innerHTML = "";
   for (const u of universities) {
-    const chip = document.createElement("span");
-    chip.className = "chip" + (state.filters.universities.includes(u) ? " on" : "");
-    chip.textContent = u;
-    chip.onclick = () => {
-      const arr = state.filters.universities;
-      const i = arr.indexOf(u);
-      i >= 0 ? arr.splice(i, 1) : arr.push(u);
-      chip.classList.toggle("on");
-      renderList();
-    };
-    uWrap.appendChild(chip);
+    appendToggleChip(uWrap, u, u, state.filters.universities);
+  }
+
+  // 学部・試験区分(データから動的生成。空は「(区分なし)」として選択可能)
+  const examTypes = [...new Set(state.problems.map(p => p.exam_type || ""))].sort((a, b) => a.localeCompare(b, "ja"));
+  state.filters.examTypes = state.filters.examTypes.filter(t => examTypes.includes(t));
+  const eWrap = $("#examtype-chips");
+  eWrap.innerHTML = "";
+  for (const t of examTypes) {
+    appendToggleChip(eWrap, t || "(区分なし)", t, state.filters.examTypes);
+  }
+
+  // 大問番号(データから動的生成)
+  const questionNos = [...new Set(state.problems.map(p => p.question_no))].sort((a, b) => a - b);
+  state.filters.questionNos = state.filters.questionNos.filter(n => questionNos.includes(n));
+  const qWrap = $("#qno-chips");
+  qWrap.innerHTML = "";
+  for (const n of questionNos) {
+    appendToggleChip(qWrap, `第${n}問`, n, state.filters.questionNos);
   }
 
   // 単元タグ
   const unitWrap = $("#unit-chips");
   unitWrap.innerHTML = "";
   for (const t of UNIT_TAGS) {
-    const chip = document.createElement("span");
-    chip.className = "chip" + (state.filters.unitTags.includes(t.id) ? " on" : "");
-    chip.textContent = t.name;
-    chip.onclick = () => {
-      const arr = state.filters.unitTags;
-      const i = arr.indexOf(t.id);
-      i >= 0 ? arr.splice(i, 1) : arr.push(t.id);
-      chip.classList.toggle("on");
-      renderList();
-    };
-    unitWrap.appendChild(chip);
+    appendToggleChip(unitWrap, t.name, t.id, state.filters.unitTags);
   }
 
   // 解法タグ(グループ見出しつき)
@@ -851,17 +873,7 @@ function buildFilterChips() {
     label.textContent = g;
     mWrap.appendChild(label);
     for (const t of METHOD_TAGS.filter(t => t.group === g)) {
-      const chip = document.createElement("span");
-      chip.className = "chip" + (state.filters.methodTags.includes(t.id) ? " on" : "");
-      chip.textContent = t.name;
-      chip.onclick = () => {
-        const arr = state.filters.methodTags;
-        const i = arr.indexOf(t.id);
-        i >= 0 ? arr.splice(i, 1) : arr.push(t.id);
-        chip.classList.toggle("on");
-        renderList();
-      };
-      mWrap.appendChild(chip);
+      appendToggleChip(mWrap, t.name, t.id, state.filters.methodTags);
     }
   }
 }
@@ -871,8 +883,10 @@ function filteredProblems() {
   return state.problems
     .filter(p => {
       if (f.universities.length && !f.universities.includes(p.university)) return false;
+      if (f.examTypes.length && !f.examTypes.includes(p.exam_type || "")) return false;
       if (f.yearFrom != null && p.year < f.yearFrom) return false;
       if (f.yearTo != null && p.year > f.yearTo) return false;
+      if (f.questionNos.length && !f.questionNos.includes(p.question_no)) return false;
       if (f.unitTags.length && !(p.unit_tags || []).some(t => f.unitTags.includes(t))) return false;
       if (f.methodTags.length && !(p.method_tags || []).some(t => f.methodTags.includes(t))) return false;
       if (f.diffBand) {
@@ -1249,7 +1263,7 @@ function setupEvents() {
     renderList();
   });
   $("#clear-filters").onclick = () => {
-    state.filters = { universities: [], yearFrom: null, yearTo: null, unitTags: [], methodTags: [], diffBand: "" };
+    state.filters = { universities: [], examTypes: [], yearFrom: null, yearTo: null, questionNos: [], unitTags: [], methodTags: [], diffBand: "" };
     $("#year-from").value = "";
     $("#year-to").value = "";
     $("#diff-band").value = "";
