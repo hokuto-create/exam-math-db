@@ -293,6 +293,13 @@ textarea { resize: vertical; }
   overflow-x: auto;
   text-align: justify;
 }
+.exam-sheet .exam-source {
+  margin-top: 22px;
+  font-size: 10px;
+  line-height: 1.5;
+  color: #888;
+  text-align: right;
+}
 
 /* 印刷: 問題文シートだけを紙に出す(印刷ボタン経由で body.print-problem が付く) */
 @media print {
@@ -515,6 +522,7 @@ footer.site .admin-link {
         <div id="exam-meta" class="exam-meta"></div>
         <div id="exam-qno" class="exam-qno"></div>
         <div id="problem-text" class="problem-text"></div>
+        <div id="exam-source" class="exam-source" hidden></div>
       </div>
     </div>
     <div class="vote-box">
@@ -990,6 +998,10 @@ function showView(name) {
   $("#mode-tabs").hidden = !(name === "browse" || name === "list");
   $("#tab-browse").classList.toggle("active", name === "browse");
   $("#tab-search").classList.toggle("active", name === "list");
+  // 問題文つきの詳細画面を表示中は、印刷時に問題シートのみを出す
+  // (iOS Safari は window.print() が非同期に描画するため、印刷時だけの
+  //  クラス付け外しでは間に合わない。表示中は常時付与しておく)
+  document.body.classList.toggle("print-problem", name === "detail" && !$("#problem-box").hidden);
   window.scrollTo(0, 0);
 }
 
@@ -1264,13 +1276,22 @@ function renderDetail() {
       <a href="https://web.archive.org/web/${escapeHtml(p.source_url)}" target="_blank" rel="noopener noreferrer" class="source-link secondary" title="公式サイトから削除された場合はこちら">アーカイブで開く</a>
     </div>` : ""}`;
 
-  const text = (p.problem_text || "").trim();
+  let text = (p.problem_text || "").trim();
   $("#problem-box").hidden = !text;
   if (text) {
+    // 末尾の「出典:…」行は本文から分離し、シート下部に小さく表示する
+    let source = "";
+    const m = text.match(/\n\s*(出典[::][^\n]*)\s*$/);
+    if (m) {
+      source = m[1];
+      text = text.slice(0, m.index).trimEnd();
+    }
     $("#exam-meta").textContent = `${p.university} ${p.year}年度${p.exam_type ? " " + p.exam_type : ""}`;
     $("#exam-qno").textContent = `第 ${p.question_no} 問`;
     const el = $("#problem-text");
     el.innerHTML = escapeHtml(text); // XSS対策。$...$ はエスケープ後もMathJaxが処理する
+    $("#exam-source").hidden = !source;
+    $("#exam-source").textContent = source;
     typeset(el);
   }
 
@@ -1571,13 +1592,7 @@ function setupEvents() {
   $("#tab-search").onclick = () => { renderList(); showView("list"); };
   $("#uni-back").onclick = () => { renderBrowse(); showView("browse"); };
   $("#back-to-list").onclick = goBackFromDetail;
-  $("#problem-print").onclick = () => {
-    document.body.classList.add("print-problem");
-    const cleanup = () => document.body.classList.remove("print-problem");
-    window.addEventListener("afterprint", cleanup, { once: true });
-    window.print();
-    setTimeout(cleanup, 2000); // afterprint 非対応環境のフォールバック
-  };
+  $("#problem-print").onclick = () => window.print();
   $("#year-from").addEventListener("input", e => {
     state.filters.yearFrom = e.target.value ? Number(e.target.value) : null;
     renderList();
