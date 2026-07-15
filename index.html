@@ -286,6 +286,21 @@ textarea { resize: vertical; }
   letter-spacing: .5em;
   margin-bottom: 18px;
 }
+/* 枠付き数字の冊子(京大など)は左端に枠付き大問番号を置く */
+.exam-sheet .exam-qno.boxed {
+  text-align: left;
+  letter-spacing: 0;
+}
+/* 大問番号の四角い枠(QUESTION_NO_STYLE = "boxed" の大学) */
+.qno-box {
+  display: inline-block;
+  min-width: 1.35em;
+  padding: 0 0.3em;
+  border: 1.5px solid currentColor;
+  border-radius: 1px;
+  line-height: 1.55;
+  text-align: center;
+}
 .exam-sheet .problem-text {
   font-size: 14.5px;
   line-height: 2.1;
@@ -713,6 +728,15 @@ const UNIVERSITY_ORDER = [
   "早稲田大学",
 ];
 
+// 大問見出しの表記スタイル(実際の試験冊子の表記に合わせる。正本はここ)
+//   daimon: 「第1問」(東大の冊子表記)
+//   boxed : 数字を四角い枠で囲む(京大の冊子表記)
+// 未登録の大学は daimon(「第◯問」)で表示する
+const QUESTION_NO_STYLE = {
+  "東京大学": "daimon",
+  "京都大学": "boxed",
+};
+
 const METHOD_TAG_GROUPS = [...new Set(METHOD_TAGS.map(t => t.group))];
 const unitTagName = id => (UNIT_TAGS.find(t => t.id === id) || { name: "?" }).name;
 const methodTagName = id => (METHOD_TAGS.find(t => t.id === id) || { name: "?" }).name;
@@ -1008,6 +1032,12 @@ function fmtDate(iso) {
 function problemTitle(p) {
   return `${p.university} ${p.year}${p.exam_type ? " " + p.exam_type : ""} 第${p.question_no}問`;
 }
+// 大問番号のHTML表記(QUESTION_NO_STYLE に従い大学ごとに切替)
+function qnoHtml(p) {
+  return (QUESTION_NO_STYLE[p.university] || "daimon") === "boxed"
+    ? `<span class="qno-box">${Number(p.question_no)}</span>`
+    : `第${Number(p.question_no)}問`;
+}
 
 /* =====================================================================
  * 画面切替
@@ -1107,7 +1137,7 @@ function renderUniversity() {
       row.className = "prow";
       row.innerHTML = `
         <div class="head">
-          <span class="qno">第${p.question_no}問</span>
+          <span class="qno">${qnoHtml(p)}</span>
           <span class="stats">${avg === null ? "難易度 未投票" : `${starsHtml(avg)} ${avg.toFixed(1)}(${nVotes}票)`} ・ 💬 ${nComments}</span>
         </div>
         <div class="tags">
@@ -1237,7 +1267,7 @@ function renderList() {
     const card = document.createElement("div");
     card.className = "card";
     card.innerHTML = `
-      <div class="title">${escapeHtml(p.university)} ${p.year}${p.exam_type ? " " + escapeHtml(p.exam_type) : ""} <span class="qno">第${p.question_no}問</span></div>
+      <div class="title">${escapeHtml(p.university)} ${p.year}${p.exam_type ? " " + escapeHtml(p.exam_type) : ""} <span class="qno">${qnoHtml(p)}</span></div>
       <div class="tags">
         ${(p.unit_tags || []).map(t => `<span class="tag">${escapeHtml(unitTagName(t))}</span>`).join("")}
         ${(p.method_tags || []).map(t => `<span class="tag method">${escapeHtml(methodTagName(t))}</span>`).join("")}
@@ -1278,7 +1308,7 @@ function renderDetail() {
   if (!p) { goBackFromDetail(); return; }
 
   $("#detail-head").innerHTML = `
-    <h2>${escapeHtml(p.university)} ${p.year} <span style="color:var(--accent)">第${p.question_no}問</span></h2>
+    <h2>${escapeHtml(p.university)} ${p.year} <span style="color:var(--accent)">${qnoHtml(p)}</span></h2>
     ${p.exam_type ? `<div class="exam-type">${escapeHtml(p.exam_type)}</div>` : ""}
     <div class="tag-section">
       <div class="label">単元</div>
@@ -1308,7 +1338,14 @@ function renderDetail() {
       text = text.slice(0, m.index).trimEnd();
     }
     $("#exam-meta").textContent = `${p.university} ${p.year}年度${p.exam_type ? " " + p.exam_type : ""}`;
-    $("#exam-qno").textContent = `第 ${p.question_no} 問`;
+    const qEl = $("#exam-qno");
+    const boxed = (QUESTION_NO_STYLE[p.university] || "daimon") === "boxed";
+    qEl.classList.toggle("boxed", boxed);
+    if (boxed) {
+      qEl.innerHTML = `<span class="qno-box">${Number(p.question_no)}</span>`;
+    } else {
+      qEl.textContent = `第 ${p.question_no} 問`;
+    }
     const el = $("#problem-text");
     el.innerHTML = escapeHtml(text); // XSS対策。$...$ はエスケープ後もMathJaxが処理する
     $("#exam-source").hidden = !source;
