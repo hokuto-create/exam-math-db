@@ -249,14 +249,17 @@ textarea { resize: vertical; }
 }
 .source-link:active { opacity: .7; }
 .source-link.secondary { color: var(--muted); font-size: 12px; }
-.vote-box, .comments-box, .problem-box {
+.vote-box, .comments-box, .problem-box, .tags-box, .related-box {
   background: var(--bg2);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 14px;
   margin-bottom: 12px;
 }
-.vote-box h3, .comments-box h3, .problem-box h3 { margin: 0 0 8px; font-size: 14px; }
+.vote-box h3, .comments-box h3, .problem-box h3, .tags-box h3, .related-box h3 { margin: 0 0 8px; font-size: 14px; }
+.tags-box .tag-section:first-child { margin-top: 0; }
+.related-box .related-note { font-size: 11.5px; color: var(--muted); margin: -2px 0 8px; }
+.related-box .card:last-child { margin-bottom: 0; }
 .problem-box .box-head {
   display: flex;
   align-items: center;
@@ -571,6 +574,12 @@ footer.site .admin-link {
         </div>
       </div>
       <div id="comment-list"></div>
+    </div>
+    <div id="detail-tags" class="tags-box"></div>
+    <div id="related-box" class="related-box" hidden>
+      <h3>類題</h3>
+      <div class="related-note">単元・解法キーが近い問題です。</div>
+      <div id="related-list"></div>
     </div>
   </section>
 
@@ -1305,6 +1314,13 @@ function renderDetail() {
   $("#detail-head").innerHTML = `
     <h2>${escapeHtml(p.university)} ${p.year} <span style="color:var(--accent)">第${p.question_no}問</span></h2>
     ${p.exam_type ? `<div class="exam-type">${escapeHtml(p.exam_type)}</div>` : ""}
+    ${isSafeHttpUrl(p.source_url) ? `<div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+      <a href="${escapeHtml(p.source_url)}" target="_blank" rel="noopener noreferrer" class="source-link">公式問題PDFを開く ↗</a>
+      <a href="https://web.archive.org/web/${escapeHtml(p.source_url)}" target="_blank" rel="noopener noreferrer" class="source-link secondary" title="公式サイトから削除された場合はこちら">アーカイブで開く</a>
+    </div>` : ""}`;
+
+  // 単元・解法キーは講評コメントの下に表示する
+  $("#detail-tags").innerHTML = `
     <div class="tag-section">
       <div class="label">単元</div>
       <div class="tags" style="display:flex;flex-wrap:wrap;gap:4px">
@@ -1316,11 +1332,7 @@ function renderDetail() {
       <div class="tags" style="display:flex;flex-wrap:wrap;gap:4px">
         ${(p.method_tags || []).map(t => `<span class="tag method">${escapeHtml(methodTagName(t))}</span>`).join("") || '<span style="color:var(--muted);font-size:12px">なし</span>'}
       </div>
-    </div>
-    ${isSafeHttpUrl(p.source_url) ? `<div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
-      <a href="${escapeHtml(p.source_url)}" target="_blank" rel="noopener noreferrer" class="source-link">公式問題PDFを開く ↗</a>
-      <a href="https://web.archive.org/web/${escapeHtml(p.source_url)}" target="_blank" rel="noopener noreferrer" class="source-link secondary" title="公式サイトから削除された場合はこちら">アーカイブで開く</a>
-    </div>` : ""}`;
+    </div>`;
 
   let text = (p.problem_text || "").trim();
   $("#problem-box").hidden = !text;
@@ -1350,6 +1362,54 @@ function renderDetail() {
 
   renderVoteBox(p);
   renderComments(p);
+  renderRelated(p);
+}
+
+/* 類題: 単元タグと解法キーの両方が重なる問題を関連度順に最大 RELATED_MAX 件表示。
+   該当がなければセクションごと非表示(問題が増えてくると自動的に現れる) */
+const RELATED_MAX = 5;
+
+function relatedProblemsFor(p) {
+  const units = new Set(p.unit_tags || []);
+  const methods = new Set(p.method_tags || []);
+  return state.problems
+    .filter(q => q.id !== p.id)
+    .map(q => {
+      const su = (q.unit_tags || []).filter(t => units.has(t)).length;
+      const sm = (q.method_tags || []).filter(t => methods.has(t)).length;
+      return { q, su, sm };
+    })
+    .filter(r => r.su >= 1 && r.sm >= 1) // 単元だけの一致は類題としない
+    .sort((a, b) => (b.sm * 2 + b.su) - (a.sm * 2 + a.su) || b.q.year - a.q.year)
+    .slice(0, RELATED_MAX)
+    .map(r => r.q);
+}
+
+function renderRelated(p) {
+  const related = relatedProblemsFor(p);
+  $("#related-box").hidden = related.length === 0;
+  const wrap = $("#related-list");
+  wrap.innerHTML = "";
+  for (const q of related) {
+    const avg = avgDifficulty(q.id);
+    const nVotes = votesFor(q.id).length;
+    const nComments = visibleCommentsFor(q.id).length;
+    const card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = `
+      <div class="title">${escapeHtml(q.university)} ${q.year}${q.exam_type ? " " + escapeHtml(q.exam_type) : ""} <span class="qno">第${q.question_no}問</span></div>
+      <div class="tags">
+        ${(q.unit_tags || []).map(t => `<span class="tag">${escapeHtml(unitTagName(t))}</span>`).join("")}
+        ${(q.method_tags || []).map(t => `<span class="tag method">${escapeHtml(methodTagName(t))}</span>`).join("")}
+      </div>
+      <div class="stats">
+        <span>${avg === null ? "難易度 未投票" : `${starsHtml(avg)} ${avg.toFixed(1)}(${nVotes}票)`}</span>
+        <span>💬 ${nComments}</span>
+      </div>`;
+    // 遷移元の戻り先を引き継ぐ(類題から戻っても元の一覧に帰れる)
+    card.onclick = () => openDetail(q.id, state.detailReturn);
+    wrap.appendChild(card);
+  }
 }
 
 function renderVoteBox(p) {
