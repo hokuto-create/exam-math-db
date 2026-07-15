@@ -44,6 +44,12 @@
 -- ※問題文の著作権は大学等にあります。掲載許諾の状況を確認の上で入力してください
 alter table problems add column if not exists problem_text text;
 
+-- 公式問題PDFのURLカラムを追加(既にあればスキップ)
+-- ※運用ルール: source_url を登録したら https://web.archive.org/save/<そのURL> を
+--   一度開いて Wayback Machine に魚拓を残すこと(公式サイトからの削除に備える。
+--   詳細画面の「アーカイブで開く」リンクはこの魚拓を参照する)
+alter table problems add column if not exists source_url text;
+
 -- 自然キー(大学×年度×区分×大問)にユニーク制約を追加(既にあればスキップ)
 do $$
 begin
@@ -59,17 +65,18 @@ end $$;
 -- 形式: (大学, 年度, 試験区分, 大問番号, 単元タグID配列, 解法タグID配列, 管理メモ)
 -- =====================================================================
 insert into problems
-  (university, year, exam_type, question_no, unit_tags, method_tags, admin_note)
+  (university, year, exam_type, question_no, unit_tags, method_tags, source_url, admin_note)
 values
   -- ---- 東京大学 2026 前期理系(数学・理科)----
-  ('東京大学', 2026, '前期理系', 1, '{22,23}', '{29,30,33}', 'sinθ-θ+θ^3/6 の最大最小から ∫sin(cosx-x)dx を評価'),
-  ('東京大学', 2026, '前期理系', 2, '{5,4}',   '{34,36}',    '3×n の格子点から選んだ3点が三角形をなす確率 p_n'),
-  ('東京大学', 2026, '前期理系', 3, '{18,10}', '{22,18}',    '球面上の3点と重心固定条件。PQ中点の軌跡と線分PQの通過範囲の図示'),
-  ('東京大学', 2026, '前期理系', 4, '{13,10}', '{18,29}',    'y=x^3-kx の3接線(O,P,Q)がどの2本もなす角 π/3。kの範囲と三角形の面積'),
-  ('東京大学', 2026, '前期理系', 5, '{19}',    '{23,18}',    'w=(z-α)^3 による単位円の像。偏角の範囲と条件を満たす α の範囲の面積'),
-  ('東京大学', 2026, '前期理系', 6, '{7}',     '{11,12}',    '約数を mod 3 で分類した個数 f(n), g(n)。f(n)≧g(n) の証明など')
+  ('東京大学', 2026, '前期理系', 1, '{22,23}', '{29,30,33}', 'https://www.u-tokyo.ac.jp/content/400239118.pdf', 'sinθ-θ+θ^3/6 の最大最小から ∫sin(cosx-x)dx を評価'),
+  ('東京大学', 2026, '前期理系', 2, '{5,4}',   '{34,36}',    'https://www.u-tokyo.ac.jp/content/400239118.pdf', '3×n の格子点から選んだ3点が三角形をなす確率 p_n'),
+  ('東京大学', 2026, '前期理系', 3, '{18,10}', '{22,18}',    'https://www.u-tokyo.ac.jp/content/400239118.pdf', '球面上の3点と重心固定条件。PQ中点の軌跡と線分PQの通過範囲の図示'),
+  ('東京大学', 2026, '前期理系', 4, '{13,10}', '{18,29}',    'https://www.u-tokyo.ac.jp/content/400239118.pdf', 'y=x^3-kx の3接線(O,P,Q)がどの2本もなす角 π/3。kの範囲と三角形の面積'),
+  ('東京大学', 2026, '前期理系', 5, '{19}',    '{23,18}',    'https://www.u-tokyo.ac.jp/content/400239118.pdf', 'w=(z-α)^3 による単位円の像。偏角の範囲と条件を満たす α の範囲の面積'),
+  ('東京大学', 2026, '前期理系', 6, '{7}',     '{11,12}',    'https://www.u-tokyo.ac.jp/content/400239118.pdf', '約数を mod 3 で分類した個数 f(n), g(n)。f(n)≧g(n) の証明など')
 on conflict (university, year, exam_type, question_no)
 do update set
   unit_tags   = excluded.unit_tags,
   method_tags = excluded.method_tags,
+  source_url  = excluded.source_url,
   admin_note  = excluded.admin_note;
