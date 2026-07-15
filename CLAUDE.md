@@ -38,6 +38,7 @@ create table problems (
   unit_tags   int[] not null default '{}',  -- UNIT_TAGS のID配列
   method_tags int[] not null default '{}',  -- METHOD_TAGS のID配列
   problem_text text,                        -- 問題文(任意。掲載は許諾状況を確認の上で)
+  source_url  text,                         -- 公式問題PDF等へのリンク(任意)
   admin_note  text,                         -- 管理者メモ(任意)
   created_at  timestamptz not null default now()
 );
@@ -159,7 +160,9 @@ create policy "comments_anon_hide_TEMP" on comments
 ### 3. 問題詳細
 
 - 基本情報とタグ一覧。戻るボタンは遷移元(アーカイブの大学ページ/タグ検索)へ戻す
-- 問題文: `problem_text` があれば「問題文」ボックスに表示(HTMLエスケープ+改行保持、MathJax対応)。空なら非表示
+- 問題文: `problem_text` があれば試験冊子風シート(明朝体・「第 ◯ 問」見出し・大学/年度メタ)で表示(HTMLエスケープ+改行保持、MathJax対応)。空なら非表示
+- 「印刷 / PDF保存」ボタン: 問題文シートだけを印刷する(`body.print-problem` + print CSS。ブラウザの印刷ダイアログからPDF保存可)
+- `source_url` があれば「公式問題PDFを開く」リンクを表示(http/https のみ許可)
 - 難易度投票: ★1〜5タップで投票。`device_uuid`(localStorage、初回 `crypto.randomUUID()` 生成)で upsert。自分の投票済み状態を表示
 - コメント: 投稿フォーム(500字制限・トリムのみ、プレビューなし)、一覧は新着順、MathJax対応
 - 各コメントに通報ボタン(確認ダイアログ → `report_comment` RPC)。通報済みIDはlocalStorageに記録し連打防止
@@ -168,7 +171,7 @@ create policy "comments_anon_hide_TEMP" on comments
 ### 4. 管理画面(パスワード保護)
 
 - 入口はフッターの目立たないリンク。パスワードはJS内定数 `ADMIN_PASSWORD`(プレースホルダ)との簡易照合(**セキュリティ機構ではなくUIゲート**。本命はRLS側)
-- 問題の新規登録・編集・削除(タグはチェックボックスで選択、問題文はテキストエリアで入力)
+- 問題の新規登録・編集・削除(タグはチェックボックスで選択、問題文はテキストエリア、公式PDF URLはテキスト入力)
 - コメント管理: 全コメント一覧(通報数順/新着順ソート)、`is_hidden` トグル
 
 ## コーディング規約

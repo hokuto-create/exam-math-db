@@ -237,6 +237,17 @@ textarea { resize: vertical; }
 .detail-head .exam-type { color: var(--muted); font-size: 13px; }
 .tag-section { margin-top: 10px; }
 .tag-section .label { font-size: 11.5px; color: var(--muted); margin-bottom: 3px; }
+.source-link {
+  display: inline-block;
+  font-size: 13px;
+  color: var(--accent);
+  text-decoration: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 12px;
+  background: var(--bg2);
+}
+.source-link:active { opacity: .7; }
 .vote-box, .comments-box, .problem-box {
   background: var(--bg2);
   border: 1px solid var(--border);
@@ -245,11 +256,57 @@ textarea { resize: vertical; }
   margin-bottom: 12px;
 }
 .vote-box h3, .comments-box h3, .problem-box h3 { margin: 0 0 8px; font-size: 14px; }
-.problem-box .problem-text {
-  font-size: 14px;
-  line-height: 1.9;
+.problem-box .box-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* 試験冊子風の問題文シート */
+.exam-sheet {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 22px 18px 26px;
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", "YuMincho", "Noto Serif JP", serif;
+  color: #1a1a1a;
+}
+.exam-sheet .exam-meta {
+  text-align: right;
+  font-size: 11.5px;
+  color: #555;
+  margin-bottom: 14px;
+}
+.exam-sheet .exam-qno {
+  text-align: center;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: .5em;
+  margin-bottom: 18px;
+}
+.exam-sheet .problem-text {
+  font-size: 14.5px;
+  line-height: 2.1;
   white-space: pre-wrap;
   overflow-x: auto;
+  text-align: justify;
+}
+
+/* 印刷: 問題文シートだけを紙に出す(印刷ボタン経由で body.print-problem が付く) */
+@media print {
+  body.print-problem { background: #fff; }
+  body.print-problem * { visibility: hidden; }
+  body.print-problem #exam-sheet, body.print-problem #exam-sheet * { visibility: visible; }
+  body.print-problem #exam-sheet {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    border: none;
+    border-radius: 0;
+    padding: 10mm 8mm;
+  }
 }
 .vote-stars { display: flex; gap: 4px; margin: 6px 0 8px; }
 .vote-stars button {
@@ -449,8 +506,15 @@ footer.site .admin-link {
     <div class="back-row"><button id="back-to-list" class="small ghost">← 戻る</button></div>
     <div id="detail-head" class="detail-head"></div>
     <div id="problem-box" class="problem-box" hidden>
-      <h3>問題文</h3>
-      <div id="problem-text" class="problem-text"></div>
+      <div class="box-head">
+        <h3>問題文</h3>
+        <button id="problem-print" class="small ghost">印刷 / PDF保存</button>
+      </div>
+      <div id="exam-sheet" class="exam-sheet">
+        <div id="exam-meta" class="exam-meta"></div>
+        <div id="exam-qno" class="exam-qno"></div>
+        <div id="problem-text" class="problem-text"></div>
+      </div>
     </div>
     <div class="vote-box">
       <h3>難易度投票</h3>
@@ -493,6 +557,7 @@ footer.site .admin-link {
             <div><label>試験区分(任意)</label><input id="pf-exam-type" type="text" placeholder="前期理系"></div>
             <div><label>大問番号</label><input id="pf-question-no" type="number" inputmode="numeric" placeholder="1"></div>
           </div>
+          <div><label>公式問題PDFのURL(任意)</label><input id="pf-source-url" type="url" placeholder="https://www.u-tokyo.ac.jp/content/xxxx.pdf"></div>
           <div><label>問題文(任意・数式は $x^2$ のように囲む)</label><textarea id="pf-problem-text" rows="6" placeholder="掲載許諾の状況を確認の上で入力してください"></textarea></div>
           <div><label>単元タグ</label><div id="pf-unit-checks" class="checkbox-grid"></div></div>
           <div><label>解法タグ</label><div id="pf-method-checks" class="checkbox-grid"></div></div>
@@ -633,12 +698,12 @@ const methodTagName = id => (METHOD_TAGS.find(t => t.id === id) || { name: "?" }
 const SAMPLE_DATA = {
   problems: [
     // ---- 東京大学 2026 前期理系(実データ: db/seed.sql と同期)----
-    { id: 1, university: "東京大学", year: 2026, exam_type: "前期理系", question_no: 1, unit_tags: [22, 23], method_tags: [29, 30, 33], admin_note: "sinθ-θ+θ^3/6 の最大最小から ∫sin(cosx-x)dx を評価" },
-    { id: 2, university: "東京大学", year: 2026, exam_type: "前期理系", question_no: 2, unit_tags: [5, 4], method_tags: [34, 36], admin_note: "3×n の格子点から選んだ3点が三角形をなす確率 p_n" },
-    { id: 3, university: "東京大学", year: 2026, exam_type: "前期理系", question_no: 3, unit_tags: [18, 10], method_tags: [22, 18], admin_note: "球面上の3点と重心固定条件。PQ中点の軌跡と線分PQの通過範囲の図示" },
-    { id: 4, university: "東京大学", year: 2026, exam_type: "前期理系", question_no: 4, unit_tags: [13, 10], method_tags: [18, 29], admin_note: "y=x^3-kx の3接線(O,P,Q)がどの2本もなす角 π/3。kの範囲と三角形の面積" },
-    { id: 5, university: "東京大学", year: 2026, exam_type: "前期理系", question_no: 5, unit_tags: [19], method_tags: [23, 18], admin_note: "w=(z-α)^3 による単位円の像。偏角の範囲と条件を満たす α の範囲の面積" },
-    { id: 6, university: "東京大学", year: 2026, exam_type: "前期理系", question_no: 6, unit_tags: [7], method_tags: [11, 12], admin_note: "約数を mod 3 で分類した個数 f(n), g(n)。f(n)≧g(n) の証明など" },
+    { id: 1, university: "東京大学", year: 2026, exam_type: "前期理系", question_no: 1, unit_tags: [22, 23], method_tags: [29, 30, 33], source_url: "https://www.u-tokyo.ac.jp/content/400239118.pdf", admin_note: "sinθ-θ+θ^3/6 の最大最小から ∫sin(cosx-x)dx を評価" },
+    { id: 2, university: "東京大学", year: 2026, exam_type: "前期理系", question_no: 2, unit_tags: [5, 4], method_tags: [34, 36], source_url: "https://www.u-tokyo.ac.jp/content/400239118.pdf", admin_note: "3×n の格子点から選んだ3点が三角形をなす確率 p_n" },
+    { id: 3, university: "東京大学", year: 2026, exam_type: "前期理系", question_no: 3, unit_tags: [18, 10], method_tags: [22, 18], source_url: "https://www.u-tokyo.ac.jp/content/400239118.pdf", admin_note: "球面上の3点と重心固定条件。PQ中点の軌跡と線分PQの通過範囲の図示" },
+    { id: 4, university: "東京大学", year: 2026, exam_type: "前期理系", question_no: 4, unit_tags: [13, 10], method_tags: [18, 29], source_url: "https://www.u-tokyo.ac.jp/content/400239118.pdf", admin_note: "y=x^3-kx の3接線(O,P,Q)がどの2本もなす角 π/3。kの範囲と三角形の面積" },
+    { id: 5, university: "東京大学", year: 2026, exam_type: "前期理系", question_no: 5, unit_tags: [19], method_tags: [23, 18], source_url: "https://www.u-tokyo.ac.jp/content/400239118.pdf", admin_note: "w=(z-α)^3 による単位円の像。偏角の範囲と条件を満たす α の範囲の面積" },
+    { id: 6, university: "東京大学", year: 2026, exam_type: "前期理系", question_no: 6, unit_tags: [7], method_tags: [11, 12], source_url: "https://www.u-tokyo.ac.jp/content/400239118.pdf", admin_note: "約数を mod 3 で分類した個数 f(n), g(n)。f(n)≧g(n) の証明など" },
     // ---- 以下はデモ用のダミーデータ(実データが入り次第差し替える)----
     { id: 7, university: "東京大学", year: 2025, exam_type: "前期理系", question_no: 3, unit_tags: [6], method_tags: [32, 36], admin_note: "", problem_text: "(問題文表示のデモ用サンプル。実際の出題とは異なります)\n1個のさいころを $n$ 回投げ、1の目が偶数回(0回を含む)出る確率を $p_n$ とする。\n(1) $p_{n+1}$ を $p_n$ を用いて表せ。\n(2) $p_n$ を求めよ。" },
     { id: 8, university: "京都大学", year: 2026, exam_type: "前期理系", question_no: 2, unit_tags: [18], method_tags: [22, 26], admin_note: "" },
@@ -687,6 +752,12 @@ function escapeHtml(s) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+function isSafeHttpUrl(u) {
+  if (!u) return false;
+  try { return ["http:", "https:"].includes(new URL(u).protocol); }
+  catch { return false; }
 }
 
 let toastTimer = null;
@@ -1185,11 +1256,14 @@ function renderDetail() {
       <div class="tags" style="display:flex;flex-wrap:wrap;gap:4px">
         ${(p.method_tags || []).map(t => `<span class="tag method">${escapeHtml(methodTagName(t))}</span>`).join("") || '<span style="color:var(--muted);font-size:12px">なし</span>'}
       </div>
-    </div>`;
+    </div>
+    ${isSafeHttpUrl(p.source_url) ? `<div style="margin-top:12px"><a href="${escapeHtml(p.source_url)}" target="_blank" rel="noopener noreferrer" class="source-link">公式問題PDFを開く ↗</a></div>` : ""}`;
 
   const text = (p.problem_text || "").trim();
   $("#problem-box").hidden = !text;
   if (text) {
+    $("#exam-meta").textContent = `${p.university} ${p.year}年度${p.exam_type ? " " + p.exam_type : ""}`;
+    $("#exam-qno").textContent = `第 ${p.question_no} 問`;
     const el = $("#problem-text");
     el.innerHTML = escapeHtml(text); // XSS対策。$...$ はエスケープ後もMathJaxが処理する
     typeset(el);
@@ -1373,6 +1447,7 @@ function openProblemForm(problemId) {
   $("#pf-year").value = p ? p.year : "";
   $("#pf-exam-type").value = p ? p.exam_type : "";
   $("#pf-question-no").value = p ? p.question_no : "";
+  $("#pf-source-url").value = p ? (p.source_url || "") : "";
   $("#pf-problem-text").value = p ? (p.problem_text || "") : "";
   $("#pf-admin-note").value = p ? (p.admin_note || "") : "";
   for (const cb of document.querySelectorAll('#pf-unit-checks input[type="checkbox"]')) {
@@ -1400,6 +1475,11 @@ async function saveProblemForm() {
   }
   const unitTags = [...document.querySelectorAll('#pf-unit-checks input:checked')].map(cb => Number(cb.value));
   const methodTags = [...document.querySelectorAll('#pf-method-checks input:checked')].map(cb => Number(cb.value));
+  const sourceUrl = $("#pf-source-url").value.trim();
+  if (sourceUrl && !isSafeHttpUrl(sourceUrl)) {
+    toast("公式PDFのURLは http(s) で始まる形式で入力してください");
+    return;
+  }
   const fields = {
     university,
     year,
@@ -1407,6 +1487,7 @@ async function saveProblemForm() {
     question_no: questionNo,
     unit_tags: unitTags,
     method_tags: methodTags,
+    source_url: sourceUrl || null,
     problem_text: $("#pf-problem-text").value.trim() || null,
     admin_note: $("#pf-admin-note").value.trim(),
   };
@@ -1485,6 +1566,13 @@ function setupEvents() {
   $("#tab-search").onclick = () => { renderList(); showView("list"); };
   $("#uni-back").onclick = () => { renderBrowse(); showView("browse"); };
   $("#back-to-list").onclick = goBackFromDetail;
+  $("#problem-print").onclick = () => {
+    document.body.classList.add("print-problem");
+    const cleanup = () => document.body.classList.remove("print-problem");
+    window.addEventListener("afterprint", cleanup, { once: true });
+    window.print();
+    setTimeout(cleanup, 2000); // afterprint 非対応環境のフォールバック
+  };
   $("#year-from").addEventListener("input", e => {
     state.filters.yearFrom = e.target.value ? Number(e.target.value) : null;
     renderList();
