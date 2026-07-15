@@ -282,17 +282,28 @@ textarea { resize: vertical; }
   color: #555;
   margin-bottom: 14px;
 }
+.exam-sheet .exam-qno-line {
+  position: relative;
+  margin-bottom: 18px;
+}
 .exam-sheet .exam-qno {
   text-align: center;
   font-size: 17px;
   font-weight: 700;
   letter-spacing: .5em;
-  margin-bottom: 18px;
 }
 /* 枠付き数字の冊子(京大など)は左端に枠付き大問番号を置く */
 .exam-sheet .exam-qno.boxed {
   text-align: left;
   letter-spacing: 0;
+}
+/* 配点(冊子どおり大問見出し行の右端に置く) */
+.exam-sheet .exam-points {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  font-size: 13px;
 }
 /* 大問番号の四角い枠(QUESTION_NO_STYLE = "boxed" の大学) */
 .qno-box {
@@ -553,7 +564,10 @@ footer.site .admin-link {
       </div>
       <div id="exam-sheet" class="exam-sheet">
         <div id="exam-meta" class="exam-meta"></div>
-        <div id="exam-qno" class="exam-qno"></div>
+        <div class="exam-qno-line">
+          <div id="exam-qno" class="exam-qno"></div>
+          <div id="exam-points" class="exam-points" hidden></div>
+        </div>
         <div id="problem-text" class="problem-text"></div>
         <div id="exam-source" class="exam-source" hidden></div>
       </div>
@@ -605,6 +619,10 @@ footer.site .admin-link {
           <div class="form-2col">
             <div><label>試験区分(任意)</label><input id="pf-exam-type" type="text" placeholder="前期理系"></div>
             <div><label>大問番号</label><input id="pf-question-no" type="number" inputmode="numeric" placeholder="1"></div>
+          </div>
+          <div class="form-2col">
+            <div><label>配点(任意・冊子に明記がある場合)</label><input id="pf-points" type="number" inputmode="numeric" placeholder="30"></div>
+            <div></div>
           </div>
           <div><label>公式問題PDFのURL(任意)</label><input id="pf-source-url" type="url" placeholder="https://www.u-tokyo.ac.jp/content/xxxx.pdf"></div>
           <div><label>問題文(任意・数式は $x^2$ のように囲む)</label><textarea id="pf-problem-text" rows="6" placeholder="掲載許諾の状況を確認の上で入力してください"></textarea></div>
@@ -764,12 +782,12 @@ const SAMPLE_DATA = {
     { id: 5, university: "東京大学", year: 2026, exam_type: "前期理系", question_no: 5, unit_tags: [19], method_tags: [23, 18], source_url: "https://www.u-tokyo.ac.jp/content/400239118.pdf", problem_text: "複素数平面上の原点を中心とする半径 $1$ の円を $C$ とする。複素数 $\\alpha$ と $C$ 上の点 $\\mathrm{P}(z)$ に対し,$w=(z-\\alpha)^3$ とおく。$\\mathrm{P}$ が $C$ 上を動くときの点 $\\mathrm{Q}(w)$ の軌跡を $D$ とする。\n\n(1) $\\alpha=-3$ とし,$w$ の偏角を $\\theta$ とおく。$\\mathrm{P}$ が $C$ 上を動くとき,$\\sin\\theta$ がとりうる値の範囲を求めよ。\n\n(2) $\\alpha$ が次の条件を満たすように動く。\n\n条件: $D$ は実軸の正の部分および負の部分の両方と共有点を持つ。\n\n複素数平面上の点 $\\mathrm{R}(\\alpha)$ が動きうる範囲の面積を求めよ。\n\n出典:東京大学 2026年度 第2次学力試験問題 数学(理科)第5問(原本より数式の組版を変更して転載)", admin_note: "w=(z-α)^3 による単位円の像。偏角の範囲と条件を満たす α の範囲の面積" },
     { id: 6, university: "東京大学", year: 2026, exam_type: "前期理系", question_no: 6, unit_tags: [7], method_tags: [11, 12], source_url: "https://www.u-tokyo.ac.jp/content/400239118.pdf", problem_text: "$n$ を正の整数とする。$n$ の正の約数のうち,$3$ で割って $1$ 余るものの個数を $f(n)$,$3$ で割って $2$ 余るものの個数を $g(n)$ とする。\n\n(1) $f(2800),\\ g(2800)$ を求めよ。\n\n(2) $f(n)\\geqq g(n)$ を示せ。\n\n(3) $g(n)=15$ であるとき,$f(n)$ がとりうる値を求めよ。\n\n出典:東京大学 2026年度 第2次学力試験問題 数学(理科)第6問(原本より数式の組版を変更して転載)", admin_note: "約数を mod 3 で分類した個数 f(n), g(n)。f(n)≧g(n) の証明など" },
     // ---- 京都大学 2026 前期理系(実データ: db/seed.sql と同期)----
-    { id: 15, university: "京都大学", year: 2026, exam_type: "前期理系", question_no: 1, unit_tags: [21, 22], method_tags: [16, 29], source_url: "https://www.kyoto-u.ac.jp/sites/default/files/inline-files/admissionsundergradpast_eqR08_eqdocumentsR08_3M04-67eab9889126ec2b1c07384f2e5e4fff.pdf", problem_text: "$a$ は $1$ より大きい実数とし,$k$ は実数とする。$0<x<1$ において定義された関数を\n$$f(x)=\\frac{1}{x^2\\left(\\log\\dfrac{a}{x}\\right)^2}$$\nとおく。$y=f(x)$ と $y=k$ のグラフの共有点がちょうど $2$ 個存在するような実数の組 $(a,\\ k)$ の集合を,座標平面上に図示せよ。ただし $\\log x$ は自然対数とする。また,$\\displaystyle\\lim_{x\\to+0}x\\log x=0$ が成り立つことを証明なしに用いてよい。\n\n出典:京都大学 2026年度 入学試験問題 数学(理系)第1問(原本より数式の組版を変更して転載)", admin_note: "f(x)=1/(x²(log(a/x))²) と y=k の共有点がちょうど2個となる (a,k) の集合の図示" },
-    { id: 16, university: "京都大学", year: 2026, exam_type: "前期理系", question_no: 2, unit_tags: [18], method_tags: [22, 26], source_url: "https://www.kyoto-u.ac.jp/sites/default/files/inline-files/admissionsundergradpast_eqR08_eqdocumentsR08_3M04-67eab9889126ec2b1c07384f2e5e4fff.pdf", problem_text: "$r$ は正の実数とする。$1$ 辺の長さが $1$ の正四面体 $\\mathrm{OABC}$ において,辺 $\\mathrm{OA}$ 上に点 $\\mathrm{P}$ をとる。点 $\\mathrm{P}$ が辺 $\\mathrm{OA}$ 上のどこにあっても,点 $\\mathrm{P}$ を中心とする半径 $r$ の球面が,辺 $\\mathrm{BC}$ と共有点をもたないような $r$ の範囲を求めよ。ただし,点 $\\mathrm{O},\\ \\mathrm{A}$ は辺 $\\mathrm{OA}$ に含まれ,点 $\\mathrm{B},\\ \\mathrm{C}$ は辺 $\\mathrm{BC}$ に含まれるとする。\n\n出典:京都大学 2026年度 入学試験問題 数学(理系)第2問(原本より数式の組版を変更して転載)", admin_note: "正四面体OABCの辺OA上の任意の点Pを中心とする半径rの球面が辺BCと交わらないrの範囲" },
-    { id: 17, university: "京都大学", year: 2026, exam_type: "前期理系", question_no: 3, unit_tags: [7], method_tags: [6, 11], source_url: "https://www.kyoto-u.ac.jp/sites/default/files/inline-files/admissionsundergradpast_eqR08_eqdocumentsR08_3M04-67eab9889126ec2b1c07384f2e5e4fff.pdf", problem_text: "$n$ は正の整数とする。整数係数の多項式\n$$(x+1)^{2^{n+1}}-(x^2+1)^{2^n}$$\nのすべての係数が $2^m$ で割り切れるような正の整数 $m$ のうち,最大のものは $n+1$ であることを示せ。\n\n〔補足説明〕ただし,\n$(x+1)^{2^{n+1}}$ は $x+1$ の $2^{n+1}$ 乗を表す。\n$(x^2+1)^{2^n}$ は $x^2+1$ の $2^n$ 乗を表す。\n$2^m$ は $2$ の $m$ 乗を表す。\n\n出典:京都大学 2026年度 入学試験問題 数学(理系)第3問および補足説明紙(原本より数式の組版を変更して転載)", admin_note: "(x+1)^{2^{n+1}}−(x²+1)^{2^n} の全係数を割り切る 2^m の最大の m が n+1 であることの証明" },
-    { id: 18, university: "京都大学", year: 2026, exam_type: "前期理系", question_no: 4, unit_tags: [3, 11], method_tags: [3, 25, 29], source_url: "https://www.kyoto-u.ac.jp/sites/default/files/inline-files/admissionsundergradpast_eqR08_eqdocumentsR08_3M04-67eab9889126ec2b1c07384f2e5e4fff.pdf", problem_text: "平面において,次の条件 $(*)$ を満たす正三角形の $1$ 辺の長さの最小値を求めよ。\n\n$(*)$ $1$ 辺の長さが $1$ の正方形であって,$4$ つの頂点がすべてその正三角形の内部または辺上にあるようなものが存在する。\n\n出典:京都大学 2026年度 入学試験問題 数学(理系)第4問(原本より数式の組版を変更して転載)", admin_note: "1辺1の正方形を内部または辺上に含む正三角形の1辺の長さの最小値" },
-    { id: 19, university: "京都大学", year: 2026, exam_type: "前期理系", question_no: 5, unit_tags: [23, 24], method_tags: [3], source_url: "https://www.kyoto-u.ac.jp/sites/default/files/inline-files/admissionsundergradpast_eqR08_eqdocumentsR08_3M04-67eab9889126ec2b1c07384f2e5e4fff.pdf", problem_text: "$a$ は $0<a<\\pi$ を満たす実数とする。$2$ つの関数 $y=\\sin(x+a)$ と $y=\\sin(x-a)$ のグラフの,$-\\dfrac{\\pi}{2}\\leqq x\\leqq\\dfrac{\\pi}{2}$ の部分が囲む領域を $D_a$ とする。$x$ 軸のまわりに $D_a$ を $1$ 回転してできる立体の体積を求めよ。\n\n出典:京都大学 2026年度 入学試験問題 数学(理系)第5問(原本より数式の組版を変更して転載)", admin_note: "y=sin(x+a) と y=sin(x−a) が囲む領域 D_a の x軸回転体の体積" },
-    { id: 20, university: "京都大学", year: 2026, exam_type: "前期理系", question_no: 6, unit_tags: [5, 4], method_tags: [35], source_url: "https://www.kyoto-u.ac.jp/sites/default/files/inline-files/admissionsundergradpast_eqR08_eqdocumentsR08_3M04-67eab9889126ec2b1c07384f2e5e4fff.pdf", problem_text: "$n$ は $3$ 以上の整数とする。$1$ から $n$ までの番号が書かれた $n$ 枚の札が袋に入っている。ただし,同じ番号が書かれた札はないとする。この袋から $3$ 枚の札を同時に取り出し,一番大きな番号を $X$ とする。$X$ の期待値を求めよ。\n\n出典:京都大学 2026年度 入学試験問題 数学(理系)第6問(原本より数式の組版を変更して転載)", admin_note: "n枚から3枚同時に取り出したときの最大番号 X の期待値" },
+    { id: 15, university: "京都大学", year: 2026, exam_type: "前期理系", question_no: 1, points: 30, unit_tags: [21, 22], method_tags: [16, 29], source_url: "https://www.kyoto-u.ac.jp/sites/default/files/inline-files/admissionsundergradpast_eqR08_eqdocumentsR08_3M04-67eab9889126ec2b1c07384f2e5e4fff.pdf", problem_text: "　$a$ は $1$ より大きい実数とし,$k$ は実数とする.$0<x<1$ において定義された関数を\n$$f(x)=\\frac{1}{x^2\\left(\\log\\dfrac{a}{x}\\right)^2}$$\nとおく.$y=f(x)$ と $y=k$ のグラフの共有点がちょうど $2$ 個存在するような実数の組 $(a,\\ k)$ の集合を,座標平面上に図示せよ.ただし $\\log x$ は自然対数とする.また,$\\displaystyle\\lim_{x\\to+0}x\\log x=0$ が成り立つことを証明なしに用いてよい.\n\n出典:京都大学 2026年度 入学試験問題 数学(理系)第1問(原本より数式の組版を変更して転載)", admin_note: "f(x)=1/(x²(log(a/x))²) と y=k の共有点がちょうど2個となる (a,k) の集合の図示" },
+    { id: 16, university: "京都大学", year: 2026, exam_type: "前期理系", question_no: 2, points: 30, unit_tags: [18], method_tags: [22, 26], source_url: "https://www.kyoto-u.ac.jp/sites/default/files/inline-files/admissionsundergradpast_eqR08_eqdocumentsR08_3M04-67eab9889126ec2b1c07384f2e5e4fff.pdf", problem_text: "　$r$ は正の実数とする.$1$ 辺の長さが $1$ の正四面体 $\\mathrm{OABC}$ において,辺 $\\mathrm{OA}$ 上に点 $\\mathrm{P}$ をとる.点 $\\mathrm{P}$ が辺 $\\mathrm{OA}$ 上のどこにあっても,点 $\\mathrm{P}$ を中心とする半径 $r$ の球面が,辺 $\\mathrm{BC}$ と共有点をもたないような $r$ の範囲を求めよ.ただし,点 $\\mathrm{O},\\ \\mathrm{A}$ は辺 $\\mathrm{OA}$ に含まれ,点 $\\mathrm{B},\\ \\mathrm{C}$ は辺 $\\mathrm{BC}$ に含まれるとする.\n\n出典:京都大学 2026年度 入学試験問題 数学(理系)第2問(原本より数式の組版を変更して転載)", admin_note: "正四面体OABCの辺OA上の任意の点Pを中心とする半径rの球面が辺BCと交わらないrの範囲" },
+    { id: 17, university: "京都大学", year: 2026, exam_type: "前期理系", question_no: 3, points: 35, unit_tags: [7], method_tags: [6, 11], source_url: "https://www.kyoto-u.ac.jp/sites/default/files/inline-files/admissionsundergradpast_eqR08_eqdocumentsR08_3M04-67eab9889126ec2b1c07384f2e5e4fff.pdf", problem_text: "　$n$ は正の整数とする.整数係数の多項式\n$$(x+1)^{2^{n+1}}-(x^2+1)^{2^n}$$\nのすべての係数が $2^m$ で割り切れるような正の整数 $m$ のうち,最大のものは $n+1$ であることを示せ.\n\n〔補足説明〕ただし,\n$(x+1)^{2^{n+1}}$ は $x+1$ の $2^{n+1}$ 乗を表す.\n$(x^2+1)^{2^n}$ は $x^2+1$ の $2^n$ 乗を表す.\n$2^m$ は $2$ の $m$ 乗を表す.\n\n出典:京都大学 2026年度 入学試験問題 数学(理系)第3問および補足説明紙(原本より数式の組版を変更して転載)", admin_note: "(x+1)^{2^{n+1}}−(x²+1)^{2^n} の全係数を割り切る 2^m の最大の m が n+1 であることの証明" },
+    { id: 18, university: "京都大学", year: 2026, exam_type: "前期理系", question_no: 4, points: 35, unit_tags: [3, 11], method_tags: [3, 25, 29], source_url: "https://www.kyoto-u.ac.jp/sites/default/files/inline-files/admissionsundergradpast_eqR08_eqdocumentsR08_3M04-67eab9889126ec2b1c07384f2e5e4fff.pdf", problem_text: "　平面において,次の条件 $(*)$ を満たす正三角形の $1$ 辺の長さの最小値を求めよ.\n$(*)$ $1$ 辺の長さが $1$ の正方形であって,$4$ つの頂点がすべてその正三角形の内部または辺上にあるようなものが存在する.\n\n出典:京都大学 2026年度 入学試験問題 数学(理系)第4問(原本より数式の組版を変更して転載)", admin_note: "1辺1の正方形を内部または辺上に含む正三角形の1辺の長さの最小値" },
+    { id: 19, university: "京都大学", year: 2026, exam_type: "前期理系", question_no: 5, points: 35, unit_tags: [23, 24], method_tags: [3], source_url: "https://www.kyoto-u.ac.jp/sites/default/files/inline-files/admissionsundergradpast_eqR08_eqdocumentsR08_3M04-67eab9889126ec2b1c07384f2e5e4fff.pdf", problem_text: "　$a$ は $0<a<\\pi$ を満たす実数とする.$2$ つの関数 $y=\\sin(x+a)$ と $y=\\sin(x-a)$ のグラフの,$-\\dfrac{\\pi}{2}\\leqq x\\leqq\\dfrac{\\pi}{2}$ の部分が囲む領域を $D_a$ とする.$x$ 軸のまわりに $D_a$ を $1$ 回転してできる立体の体積を求めよ.\n\n出典:京都大学 2026年度 入学試験問題 数学(理系)第5問(原本より数式の組版を変更して転載)", admin_note: "y=sin(x+a) と y=sin(x−a) が囲む領域 D_a の x軸回転体の体積" },
+    { id: 20, university: "京都大学", year: 2026, exam_type: "前期理系", question_no: 6, points: 35, unit_tags: [5, 4], method_tags: [35], source_url: "https://www.kyoto-u.ac.jp/sites/default/files/inline-files/admissionsundergradpast_eqR08_eqdocumentsR08_3M04-67eab9889126ec2b1c07384f2e5e4fff.pdf", problem_text: "　$n$ は $3$ 以上の整数とする.$1$ から $n$ までの番号が書かれた $n$ 枚の札が袋に入っている.ただし,同じ番号が書かれた札はないとする.この袋から $3$ 枚の札を同時に取り出し,一番大きな番号を $X$ とする.$X$ の期待値を求めよ.\n\n出典:京都大学 2026年度 入学試験問題 数学(理系)第6問(原本より数式の組版を変更して転載)", admin_note: "n枚から3枚同時に取り出したときの最大番号 X の期待値" },
     // ---- 以下はデモ用のダミーデータ(実データが入り次第差し替える)----
     { id: 7, university: "東京大学", year: 2025, exam_type: "前期理系", question_no: 3, unit_tags: [6], method_tags: [32, 36], admin_note: "" },
     { id: 9, university: "京都大学", year: 2025, exam_type: "前期理系", question_no: 6, unit_tags: [7, 15], method_tags: [1, 6, 11], admin_note: "" },
@@ -1334,8 +1352,9 @@ function renderDetail() {
       </div>
     </div>`;
 
-  let text = (p.problem_text || "").trim();
-  $("#problem-box").hidden = !text;
+  // 段落頭の全角1字下げ(冊子の再現)を保つため、trim() せず前後の空行だけ除去する
+  let text = (p.problem_text || "").replace(/^[\r\n]+/, "").replace(/\s+$/, "");
+  $("#problem-box").hidden = !text.trim();
   if (text) {
     // 末尾の「出典:…」行は本文から分離し、シート下部に小さく表示する
     let source = "";
@@ -1353,6 +1372,11 @@ function renderDetail() {
     } else {
       qEl.textContent = `第 ${p.question_no} 問`;
     }
+    // 配点(冊子に明記される大学のみ points を持つ)
+    const pts = Number(p.points);
+    const hasPts = p.points != null && Number.isFinite(pts) && pts > 0;
+    $("#exam-points").hidden = !hasPts;
+    $("#exam-points").textContent = hasPts ? `(${pts}点)` : "";
     const el = $("#problem-text");
     el.innerHTML = escapeHtml(text); // XSS対策。$...$ はエスケープ後もMathJaxが処理する
     $("#exam-source").hidden = !source;
@@ -1586,6 +1610,7 @@ function openProblemForm(problemId) {
   $("#pf-year").value = p ? p.year : "";
   $("#pf-exam-type").value = p ? p.exam_type : "";
   $("#pf-question-no").value = p ? p.question_no : "";
+  $("#pf-points").value = p && p.points != null ? p.points : "";
   $("#pf-source-url").value = p ? (p.source_url || "") : "";
   $("#pf-problem-text").value = p ? (p.problem_text || "") : "";
   $("#pf-admin-note").value = p ? (p.admin_note || "") : "";
@@ -1626,8 +1651,13 @@ async function saveProblemForm() {
     question_no: questionNo,
     unit_tags: unitTags,
     method_tags: methodTags,
+    points: $("#pf-points").value.trim() ? Number($("#pf-points").value) : null,
     source_url: sourceUrl || null,
-    problem_text: $("#pf-problem-text").value.trim() || null,
+    // 段落頭の全角1字下げを保つため trim() しない(前後の空行のみ除去)
+    problem_text: (() => {
+      const t = $("#pf-problem-text").value.replace(/^[\r\n]+/, "").replace(/\s+$/, "");
+      return t.trim() ? t : null;
+    })(),
     admin_note: $("#pf-admin-note").value.trim(),
   };
   try {
