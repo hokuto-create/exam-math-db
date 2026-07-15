@@ -45,6 +45,9 @@
 alter table problems add column if not exists problem_text text;
 
 -- 公式問題PDFのURLカラムを追加(既にあればスキップ)
+-- ※運用ルール: source_url を登録したら https://web.archive.org/save/<そのURL> を
+--   一度開いて Wayback Machine に魚拓を残すこと(公式サイトからの削除に備える。
+--   詳細画面の「アーカイブで開く」リンクはこの魚拓を参照する)
 alter table problems add column if not exists source_url text;
 
 -- 自然キー(大学×年度×区分×大問)にユニーク制約を追加(既にあればスキップ)
