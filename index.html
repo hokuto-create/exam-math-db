@@ -301,20 +301,35 @@ textarea { resize: vertical; }
   text-align: right;
 }
 
-/* 印刷: 問題文シートだけを紙に出す(印刷ボタン経由で body.print-problem が付く) */
+/* 印刷: 問題文シートだけを紙に出す(問題文つき詳細画面の表示中は body.print-problem が付く)
+   visibility ではなく display で畳む(レイアウト高さを消して余分なページを防ぐ) */
 @media print {
   body.print-problem { background: #fff; }
-  body.print-problem * { visibility: hidden; }
-  body.print-problem #exam-sheet, body.print-problem #exam-sheet * { visibility: visible; }
+  body.print-problem #app > :not(#view-detail),
+  body.print-problem #view-detail > :not(#problem-box),
+  body.print-problem #problem-box > :not(#exam-sheet),
+  body.print-problem #toast { display: none !important; }
+  body.print-problem #app,
+  body.print-problem #view-detail,
+  body.print-problem #problem-box {
+    display: block;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: #fff;
+    max-width: none;
+  }
   body.print-problem #exam-sheet {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
     border: none;
     border-radius: 0;
     padding: 10mm 8mm;
+    box-sizing: border-box;
+    /* シートを1ページぶんに引き伸ばし、出典を紙の下端に置く */
+    display: flex;
+    flex-direction: column;
+    min-height: 96vh;
   }
+  body.print-problem #exam-sheet .exam-source { margin-top: auto; }
 }
 .vote-stars { display: flex; gap: 4px; margin: 6px 0 8px; }
 .vote-stars button {
