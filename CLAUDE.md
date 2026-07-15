@@ -170,8 +170,8 @@ create policy "comments_anon_hide_TEMP" on comments
 ### 3. 問題詳細
 
 - 基本情報とタグ一覧。戻るボタンは遷移元(アーカイブの大学ページ/タグ検索)へ戻す
-- 問題文: `problem_text` があれば試験冊子風シート(明朝体・「第 ◯ 問」見出し・大学/年度メタ)で表示(HTMLエスケープ+改行保持、MathJax対応)。空なら非表示
-- 「印刷 / PDF保存」ボタン: 問題文シートだけを印刷する(`body.print-problem` + print CSS。ブラウザの印刷ダイアログからPDF保存可)
+- 問題文: `problem_text` があれば試験冊子風シート(明朝体・「第 ◯ 問」見出し・大学/年度メタ)で表示(HTMLエスケープ+改行保持、MathJax対応)。空なら非表示。末尾の「出典:…」行は本文から自動分離してシート下部に小さく表示する
+- 「印刷 / PDF保存」ボタン: 問題文シートだけを印刷する(印刷ダイアログからPDF保存可)。`body.print-problem` は問題文つき詳細画面の表示中に**常時付与**する(iOS Safari は `window.print()` の描画が非同期のため、印刷時だけの付け外しでは全画面が印刷されてしまう)
 - `source_url` があれば「公式問題PDFを開く」リンクと、Wayback Machine への「アーカイブで開く」フォールバックリンクを表示(http/https のみ許可)。運用ルール: `source_url` 登録時に `https://web.archive.org/save/<URL>` で魚拓を残す(リンク切れ対策)
 - 難易度投票: ★1〜5タップで投票。`device_uuid`(localStorage、初回 `crypto.randomUUID()` 生成)で upsert。自分の投票済み状態を表示
 - コメント: 投稿フォーム(500字制限・トリムのみ、プレビューなし)、一覧は新着順、MathJax対応
