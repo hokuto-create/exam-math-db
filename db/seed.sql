@@ -148,3 +148,56 @@ do update set
   source_url   = excluded.source_url,
   problem_text = excluded.problem_text,
   admin_note   = excluded.admin_note;
+
+-- 問題文の転記ルール(京都大学):
+--   「試験問題等の利用について」(https://www.kyoto-u.ac.jp/ja/admissions/undergrad/past-eq/copyright-policy)
+--   に従い,条項遵守を条件に複製・自動公衆送信が事前承認なしで許可されている。ただし
+--   (1) Web掲載分は送信内容のプリントアウトを添えて「京都大学入試問題等利用報告書」を提出
+--   (2) 出典明示+改変明示(problem_text 末尾の出典行) を必ず守ること。
+insert into problems
+  (university, year, exam_type, question_no, unit_tags, method_tags, source_url, problem_text, admin_note)
+values
+  -- ---- 京都大学 2026 前期理系(数学・理系)----
+  ('京都大学', 2026, '前期理系', 1, '{21,22}', '{16,29}',   'https://www.kyoto-u.ac.jp/sites/default/files/inline-files/admissionsundergradpast_eqR08_eqdocumentsR08_3M04-67eab9889126ec2b1c07384f2e5e4fff.pdf',
+'$a$ は $1$ より大きい実数とし,$k$ は実数とする。$0<x<1$ において定義された関数を
+$$f(x)=\frac{1}{x^2\left(\log\dfrac{a}{x}\right)^2}$$
+とおく。$y=f(x)$ と $y=k$ のグラフの共有点がちょうど $2$ 個存在するような実数の組 $(a,\ k)$ の集合を,座標平面上に図示せよ。ただし $\log x$ は自然対数とする。また,$\displaystyle\lim_{x\to+0}x\log x=0$ が成り立つことを証明なしに用いてよい。
+
+出典:京都大学 2026年度 入学試験問題 数学(理系)第1問(原本より数式の組版を変更して転載)',
+   'f(x)=1/(x²(log(a/x))²) と y=k の共有点がちょうど2個となる (a,k) の集合の図示'),
+  ('京都大学', 2026, '前期理系', 2, '{18}',    '{22,26}',   'https://www.kyoto-u.ac.jp/sites/default/files/inline-files/admissionsundergradpast_eqR08_eqdocumentsR08_3M04-67eab9889126ec2b1c07384f2e5e4fff.pdf',
+'$r$ は正の実数とする。$1$ 辺の長さが $1$ の正四面体 $\mathrm{OABC}$ において,辺 $\mathrm{OA}$ 上に点 $\mathrm{P}$ をとる。点 $\mathrm{P}$ が辺 $\mathrm{OA}$ 上のどこにあっても,点 $\mathrm{P}$ を中心とする半径 $r$ の球面が,辺 $\mathrm{BC}$ と共有点をもたないような $r$ の範囲を求めよ。ただし,点 $\mathrm{O},\ \mathrm{A}$ は辺 $\mathrm{OA}$ に含まれ,点 $\mathrm{B},\ \mathrm{C}$ は辺 $\mathrm{BC}$ に含まれるとする。
+
+出典:京都大学 2026年度 入学試験問題 数学(理系)第2問(原本より数式の組版を変更して転載)',
+   '正四面体OABCの辺OA上の任意の点Pを中心とする半径rの球面が辺BCと交わらないrの範囲'),
+  ('京都大学', 2026, '前期理系', 3, '{7}',     '{6,11}',    'https://www.kyoto-u.ac.jp/sites/default/files/inline-files/admissionsundergradpast_eqR08_eqdocumentsR08_3M04-67eab9889126ec2b1c07384f2e5e4fff.pdf',
+'$n$ は正の整数とする。整数係数の多項式
+$$(x+1)^{2^{n+1}}-(x^2+1)^{2^n}$$
+のすべての係数が $2^m$ で割り切れるような正の整数 $m$ のうち,最大のものは $n+1$ であることを示せ。
+
+出典:京都大学 2026年度 入学試験問題 数学(理系)第3問(原本より数式の組版を変更して転載)',
+   '(x+1)^{2^{n+1}}−(x²+1)^{2^n} の全係数を割り切る 2^m の最大の m が n+1 であることの証明'),
+  ('京都大学', 2026, '前期理系', 4, '{3,11}',  '{3,25,29}', 'https://www.kyoto-u.ac.jp/sites/default/files/inline-files/admissionsundergradpast_eqR08_eqdocumentsR08_3M04-67eab9889126ec2b1c07384f2e5e4fff.pdf',
+'平面において,次の条件 $(*)$ を満たす正三角形の $1$ 辺の長さの最小値を求めよ。
+
+$(*)$ $1$ 辺の長さが $1$ の正方形であって,$4$ つの頂点がすべてその正三角形の内部または辺上にあるようなものが存在する。
+
+出典:京都大学 2026年度 入学試験問題 数学(理系)第4問(原本より数式の組版を変更して転載)',
+   '1辺1の正方形を内部または辺上に含む正三角形の1辺の長さの最小値'),
+  ('京都大学', 2026, '前期理系', 5, '{23,24}', '{3}',       'https://www.kyoto-u.ac.jp/sites/default/files/inline-files/admissionsundergradpast_eqR08_eqdocumentsR08_3M04-67eab9889126ec2b1c07384f2e5e4fff.pdf',
+'$a$ は $0<a<\pi$ を満たす実数とする。$2$ つの関数 $y=\sin(x+a)$ と $y=\sin(x-a)$ のグラフの,$-\dfrac{\pi}{2}\leqq x\leqq\dfrac{\pi}{2}$ の部分が囲む領域を $D_a$ とする。$x$ 軸のまわりに $D_a$ を $1$ 回転してできる立体の体積を求めよ。
+
+出典:京都大学 2026年度 入学試験問題 数学(理系)第5問(原本より数式の組版を変更して転載)',
+   'y=sin(x+a) と y=sin(x−a) が囲む領域 D_a の x軸回転体の体積'),
+  ('京都大学', 2026, '前期理系', 6, '{5,4}',   '{35}',      'https://www.kyoto-u.ac.jp/sites/default/files/inline-files/admissionsundergradpast_eqR08_eqdocumentsR08_3M04-67eab9889126ec2b1c07384f2e5e4fff.pdf',
+'$n$ は $3$ 以上の整数とする。$1$ から $n$ までの番号が書かれた $n$ 枚の札が袋に入っている。ただし,同じ番号が書かれた札はないとする。この袋から $3$ 枚の札を同時に取り出し,一番大きな番号を $X$ とする。$X$ の期待値を求めよ。
+
+出典:京都大学 2026年度 入学試験問題 数学(理系)第6問(原本より数式の組版を変更して転載)',
+   'n枚から3枚同時に取り出したときの最大番号 X の期待値')
+on conflict (university, year, exam_type, question_no)
+do update set
+  unit_tags    = excluded.unit_tags,
+  method_tags  = excluded.method_tags,
+  source_url   = excluded.source_url,
+  problem_text = excluded.problem_text,
+  admin_note   = excluded.admin_note;
