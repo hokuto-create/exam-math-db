@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#faf7f0">
-<title>入試数学 過去問DB</title>
+<title>大学入試 過去問DB</title>
 <script>
 window.MathJax = {
   tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
@@ -138,7 +138,7 @@ button.small { padding: 4px 10px; font-size: 12.5px; border-radius: 6px; }
 }
 .prow:active { background: var(--card2); }
 .prow .head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-.prow .qno { font-weight: 700; color: var(--accent); }
+.prow .qno { font-weight: 700; }
 .prow .stats { font-size: 12px; color: var(--muted); white-space: nowrap; }
 .prow .tags { margin-top: 5px; display: flex; flex-wrap: wrap; gap: 4px; }
 
@@ -202,7 +202,6 @@ textarea { resize: vertical; }
 }
 .card:active { background: var(--card2); }
 .card .title { font-weight: 700; font-size: 15.5px; }
-.card .title .qno { color: var(--accent); }
 .card .tags { margin: 7px 0 6px; display: flex; flex-wrap: wrap; gap: 4px; }
 .tag {
   font-size: 11px;
@@ -478,8 +477,8 @@ footer.site .admin-link {
 <body>
 <div id="app">
   <header class="site">
-    <h1>入試数学 <span class="accent">過去問DB</span></h1>
-    <span class="sub">大学入試数学の過去問データベース</span>
+    <h1>大学入試 <span class="accent">過去問DB</span></h1>
+    <span class="sub">大学入試の過去問データベース</span>
   </header>
   <div id="demo-banner" class="demo-banner" hidden>
     デモモード(Supabase未接続)— サンプルデータを表示中。投票・コメント等の変更は保存されません。
@@ -648,7 +647,7 @@ footer.site .admin-link {
   </section>
 
   <footer class="site">
-    <div>入試数学 過去問DB — 解説は掲載していません</div>
+    <div>大学入試 過去問DB — 解説は掲載していません</div>
     <button id="admin-link" class="admin-link">管理</button>
   </footer>
 </div>
@@ -1330,7 +1329,7 @@ function renderDetail() {
   if (!p) { goBackFromDetail(); return; }
 
   $("#detail-head").innerHTML = `
-    <h2>${escapeHtml(p.university)} ${p.year} <span style="color:var(--accent)">第${p.question_no}問</span></h2>
+    <h2>${escapeHtml(p.university)} ${p.year} 第${p.question_no}問</h2>
     ${p.exam_type ? `<div class="exam-type">${escapeHtml(p.exam_type)}</div>` : ""}
     ${isSafeHttpUrl(p.source_url) ? `<div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
       <a href="${escapeHtml(p.source_url)}" target="_blank" rel="noopener noreferrer" class="source-link">公式問題PDFを開く ↗</a>
