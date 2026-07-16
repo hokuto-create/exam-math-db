@@ -258,8 +258,15 @@ insert into solutions
    full_solution, insight, alternatives, common_mistakes, grading_notes, takeaways)
 select p.id, 3, 30,
   $txt$三角関数の加法定理/置換積分/$\cos^2x,\ \cos^4x$ の定積分(半角公式)/導関数の符号と増減/関数の偶奇性$txt$,
-  $txt$(1) $f'(\theta)=\cos\theta-1+\dfrac{\theta^2}{2}$ の符号を,もう一度微分($(f')'(\theta)=\theta-\sin\theta$)して調べる。$f$ は単調増加とわかるので,両端の値が $M,\ m$。
-(2) 加法定理で $\sin(\cos x-x)$ を展開すると,$\cos(\cos x)\sin x$ の項は置換 $t=\cos x$ で消える。残る $\sin(\cos x)\cos x$ に対し,$\sin\theta=\theta-\dfrac{\theta^3}{6}+f(\theta)$($\theta=\cos x$)を代入して主要部 $\dfrac{7}{8}\pi$ を計算し,誤差項 $f(\cos x)\cos x$ を「非負かつ $M|\cos x|$ 以下」と評価する。$txt$,
+  $txt$(1) $f'(\theta)=\cos\theta-1+\dfrac{\theta^2}{2}$ の符号は,もう一度微分した $(f')'(\theta)=\theta-\sin\theta$ で調べる。$f$ は単調増加とわかるので,区間の両端の値がそのまま $M,\ m$ になる。
+
+(2) 次の3段階で評価する。
+
+① 加法定理で $\sin(\cos x-x)$ を展開する。$\cos(\cos x)\sin x$ の項は置換 $t=\cos x$ で消え,$\sin(\cos x)\cos x$ だけが残る。
+
+② $\theta=\cos x$ は $[-1,\ 1]$ に収まるので,$\sin\theta=\theta-\dfrac{\theta^3}{6}+f(\theta)$ を代入する。主要部の積分が $\dfrac{7}{8}\pi$ になる。
+
+③ 誤差項 $f(\cos x)\cos x$ を「非負かつ $M|\cos x|$ 以下」と評価する($\int_0^{2\pi}|\cos x|\,dx=4$ より $4M$ 以下)。$txt$,
   $txt$(1) $M=\sin1-\dfrac{5}{6}$,$m=-\sin1+\dfrac{5}{6}\ (=-M)$
 (2) 証明問題(方針・完全解答を参照)$txt$,
   $txt$(1) $f'(\theta)=\cos\theta-1+\dfrac{\theta^2}{2}$ とおく。さらに
@@ -322,7 +329,9 @@ insert into solutions
   (problem_id, difficulty, target_time_min, prerequisites, approach, answer)
 select p.id, 2, 20,
   $txt$組合せ $\binom{n}{r}$ の計算/期待値の定義/$\displaystyle\sum_{k=r}^{n}\binom{k}{r}=\binom{n+1}{r+1}$(ホッケースティック恒等式)$txt$,
-  $txt$最大値が $k$ となるのは「$k$ の札を取り,残り $2$ 枚を $1$〜$k-1$ から取る」場合だから $P(X=k)=\dfrac{\binom{k-1}{2}}{\binom{n}{3}}$。期待値の和は $k\binom{k-1}{2}=3\binom{k}{3}$ と変形すると $\displaystyle\sum_{k=3}^{n}\binom{k}{3}=\binom{n+1}{4}$ で一気に閉じる。$txt$,
+  $txt$最大値が $k$ となるのは「$k$ の札を取り,残り $2$ 枚を $1$〜$k-1$ から取る」場合だから
+$$P(X=k)=\dfrac{\binom{k-1}{2}}{\binom{n}{3}}$$
+期待値の和は $k\binom{k-1}{2}=3\binom{k}{3}$ と変形すると,$\displaystyle\sum_{k=3}^{n}\binom{k}{3}=\binom{n+1}{4}$ で一気に閉じる。$txt$,
   $txt$$E(X)=\dfrac{3(n+1)}{4}$$txt$
 from problems p
 where p.university = '京都大学' and p.year = 2026 and p.exam_type = '前期理系' and p.question_no = 6
