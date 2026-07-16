@@ -919,8 +919,8 @@ const SAMPLE_DATA = {
     // ---- 京都大学 2026 第6問: 「方針+答え」だけの部分入力の例 ----
     {
       id: 2, problem_id: 20, difficulty: 2, target_time_min: 20,
-      prerequisites: "組合せ $\\binom{n}{r}$ の計算/期待値の定義/$\\displaystyle\\sum_{k=r}^{n}\\binom{k}{r}=\\binom{n+1}{r+1}$(ホッケースティック恒等式)",
-      approach: "最大値が $k$ となるのは「$k$ の札を取り,残り $2$ 枚を $1$〜$k-1$ から取る」場合だから\n$$P(X=k)=\\dfrac{\\binom{k-1}{2}}{\\binom{n}{3}}$$\n期待値の和は $k\\binom{k-1}{2}=3\\binom{k}{3}$ と変形すると,$\\displaystyle\\sum_{k=3}^{n}\\binom{k}{3}=\\binom{n+1}{4}$ で一気に閉じる。",
+      prerequisites: "組合せ ${}_n\\mathrm{C}_r$ の計算/期待値の定義/$\\displaystyle\\sum_{k=r}^{n}{}_k\\mathrm{C}_r={}_{n+1}\\mathrm{C}_{r+1}$(ホッケースティック恒等式)",
+      approach: "最大値が $k$ となるのは「$k$ の札を取り,残り $2$ 枚を $1$〜$k-1$ から取る」場合だから\n$$P(X=k)=\\dfrac{{}_{k-1}\\mathrm{C}_2}{{}_n\\mathrm{C}_3}$$\n期待値の和は $k\\cdot{}_{k-1}\\mathrm{C}_2=3\\,{}_k\\mathrm{C}_3$ と変形すると,$\\displaystyle\\sum_{k=3}^{n}{}_k\\mathrm{C}_3={}_{n+1}\\mathrm{C}_4$ で一気に閉じる。",
       answer: "$E(X)=\\dfrac{3(n+1)}{4}$",
       created_at: "2026-03-10T00:00:00Z",
     },
