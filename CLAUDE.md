@@ -6,7 +6,8 @@
 
 - ユーザーは各問題の難易度(★1〜5)を投票できる(同一端末は上書き)
 - 各問題に講評コメントを書き込める(MathJax対応、`$...$` で数式)
-- 問題文は `problems.problem_text` に格納でき、詳細画面に表示される(MathJax対応)。掲載可否は下記「著作権・掲載ポリシー」に従う。解説は掲載しない
+- 問題文は `problems.problem_text` に格納でき、詳細画面に表示される(MathJax対応)。掲載可否は下記「著作権・掲載ポリシー」に従う
+- 各問題に**運営者オリジナルの構造化解答**(`solutions` テーブル)を掲載できる。単なる計算過程ではなく「発想の理由」「よくある誤答」「採点上必要な記述」まで含む11項目構成(下記「解答の構成」)で、赤本・無料サイト・生成AIとの差別化を狙う
 
 ## 著作権・掲載ポリシー
 
@@ -14,7 +15,7 @@
 - **東京大学**: 「東京大学第2次学力試験入学試験問題等の2次利用について」(平成28年4月1日 本部入試課、令和6年7月1日改定)により**事前承認なしで2次利用可**。ただし以下を厳守:
   1. **利用報告**: 一用途ごとに、成果物の公表から**1か月以内**に本部入試課の利用報告フォームで報告する(運用者のタスク)
   2. **出典明示・改変明示**: 転記した `problem_text` の末尾に必ず出典行を入れる。書式: `出典:東京大学 ◯◯年度 第2次学力試験問題 数学(理科/文科)第◯問(原本より数式の組版を変更して転載)`
-  3. **大学非公表の解答・解説の区別**: コメント欄に「利用者による講評であり大学公表の解答・解説ではない」旨を常時表示(実装済み)
+  3. **大学非公表の解答・解説の区別**: コメント欄に「利用者による講評であり大学公表の解答・解説ではない」旨、解答欄に「運営者による解答例であり大学公表の解答・解説ではない」旨を常時表示(いずれも実装済み)
   4. 第三者に著作権がある素材が含まれる場合は利用者責任で処理(数学はほぼ大学単独著作)
 - **京都大学**: 「試験問題等の利用について」(https://www.kyoto-u.ac.jp/ja/admissions/undergrad/past-eq/copyright-policy)により、京大に著作権が帰属する入試問題等(第三者著作物を除く)の複製・譲渡および自動公衆送信(Web掲載)は、条項の遵守を条件に**事前承認なしで許可**。ただし以下を厳守:
   1. **利用報告**: Web掲載(自動公衆送信)の場合は送信される内容をプリントアウトしたものを添えて「京都大学入試問題等利用報告書」を提出する。印刷物は刊行の都度、刊行後1か月以内に提出(運用者のタスク)
@@ -22,6 +23,7 @@
   3. 第三者に著作権がある素材が含まれる場合は利用者責任で処理(数学はほぼ大学単独著作)
   4. ※この確認は公式ページの検索エンジン経由の抜粋に基づく(作業環境のネットワーク制限で原文全文は未取得)。運用者は公開・利用報告の前に上記URLで条項の原文を再確認すること
 - 他大学の問題文を掲載する前に、同様の公開ポリシーの有無を確認し、この節に追記すること
+- **解答・解説(`solutions`)は運営者のオリジナル著作物**なので大学の許諾は不要。ただし解答内での問題文の引用は必要最小限にとどめる(問題文の転記は `problem_text` の掲載ポリシーに従う)
 
 ## アーキテクチャ
 
@@ -31,7 +33,7 @@
 | フロント | 単一 `index.html`(CSS/JS同梱)、SPA的にJSで3画面を切替 |
 | ライブラリ | CDN読込のみ(supabase-js v2 / MathJax v3)。ビルド工程なし |
 | バックエンド | Supabase(PostgreSQL + RLS)。URLとanon keyは `index.html` 冒頭の定数プレースホルダに後で差し込む |
-| 数式表示 | MathJax(inline math: `$...$`) |
+| 数式表示 | MathJax(inline math: `$...$`)。出力は**SVG**(`tex-svg.js`)を使う — CHTML は iOS Safari で「sin」の i など一部グリフのベースラインがずれるため |
 | デザイン | 明るい配色(クリーム系ライトテーマ)・モバイルファースト(iPhone/iPad主体) |
 
 Supabase未接続(プレースホルダのまま)の場合は**デモモード**として動作し、JS内のサンプルデータで全画面を確認できる(変更はページ再読込で消える)。
@@ -78,6 +80,25 @@ create table comments (
   created_at     timestamptz not null default now()
 );
 
+-- 解答・解説(運営者オリジナル。1問につき1件、problem_id で upsert)
+create table solutions (
+  id              bigint generated always as identity primary key,
+  problem_id      bigint not null unique references problems(id) on delete cascade,
+  difficulty      int check (difficulty between 1 and 5), -- 1. 難易度(運営評価。投票平均とは別)
+  target_time_min int,   -- 2. 目標解答時間(分)
+  prerequisites   text,  -- 3. 必要な知識
+  approach        text,  -- 4. 方針
+  answer          text,  -- 答え(答えのみ。証明問題はその旨)
+  full_solution   text,  -- 5. 完全解答
+  insight         text,  -- 6. 発想の理由
+  alternatives    text,  -- 7. 別解
+  common_mistakes text,  -- 8. よくある誤答
+  grading_notes   text,  -- 9. 採点上必要な記述
+  takeaways       text,  -- 11. この問題から学ぶこと
+  created_at      timestamptz not null default now()
+);
+-- 10. 類題 はカラムを持たず、詳細画面の自動類題セクション(タグ一致)が担う
+
 create index idx_problems_university on problems (university);
 create index idx_problems_year on problems (year);
 create index idx_problems_unit_tags on problems using gin (unit_tags);
@@ -91,12 +112,17 @@ create index idx_comments_problem on comments (problem_id);
 方針: 匿名(anon)は problems の select のみ、votes は select/insert/update、comments は select/insert と reported_count のインクリメント(RPC経由)のみ。
 
 ```sql
-alter table problems enable row level security;
-alter table votes    enable row level security;
-alter table comments enable row level security;
+alter table problems  enable row level security;
+alter table votes     enable row level security;
+alter table comments  enable row level security;
+alter table solutions enable row level security;
 
 -- problems: 読み取りのみ
 create policy "problems_anon_select" on problems
+  for select to anon using (true);
+
+-- solutions: 読み取りのみ(書き込みは problems と同様に管理者のみ)
+create policy "solutions_anon_select" on solutions
   for select to anon using (true);
 
 -- votes: 読み取り + 投票(upsert = insert/update)
@@ -135,6 +161,8 @@ grant execute on function report_comment(bigint) to anon;
 -- ★暫定(リスク承知の上で必要な場合のみ実行)
 create policy "problems_anon_write_TEMP" on problems
   for all to anon using (true) with check (true);
+create policy "solutions_anon_write_TEMP" on solutions
+  for all to anon using (true) with check (true);
 create policy "comments_anon_hide_TEMP" on comments
   for update to anon using (true) with check (true);
 ```
@@ -156,6 +184,30 @@ create policy "comments_anon_hide_TEMP" on comments
 - **図形**: 21 座標設定 / 22 ベクトルで処理 / 23 複素数平面で処理 / 24 初等幾何で処理 / 25 三角関数でパラメータ表示 / 26 空間図形を平面で切る
 - **解析**: 27 はさみうちの原理 / 28 平均値の定理 / 29 微分して増減を調べる / 30 積分と不等式 / 31 区分求積法 / 32 漸化式を立てる / 33 誘導の構造を見抜く
 - **確率・場合の数**: 34 余事象・排反に分ける / 35 対等性・確率の対称性 / 36 場合分けの設計
+
+## 解答の構成(11項目)
+
+各解答は次の構成で書く。「なぜこの置換をするのか」「なぜこの補助線なのか」「どの条件を見て解法を決めるのか」「試験中にどう発想するか」まで書くことが差別化の核。**正本は `index.html` の JS 定数 `SOLUTION_SECTIONS`**(表示順・開閉単位 tier を持つ)。
+
+| # | 項目 | DBカラム | tier(表示) |
+|---|---|---|---|
+| 1 | 難易度 | `difficulty`(1〜5。投票平均とは別の運営評価) | free(常時表示) |
+| 2 | 目標解答時間 | `target_time_min`(分) | free |
+| 3 | 必要な知識 | `prerequisites` | free |
+| 4 | 方針 | `approach` | free |
+| - | 答え | `answer`(答えのみ。証明問題はその旨) | answer(「答えを表示」で開く) |
+| 5 | 完全解答 | `full_solution` | full(「完全解答を表示」で開く) |
+| 6 | 発想の理由 | `insight` | full |
+| 7 | 別解 | `alternatives` | full |
+| 8 | よくある誤答 | `common_mistakes` | full |
+| 9 | 採点上必要な記述 | `grading_notes` | full |
+| 10 | 類題 | (カラムなし。既存の自動類題セクションが担う) | - |
+| 11 | この問題から学ぶこと | `takeaways` | full |
+
+- 全項目任意。部分入力(例: 方針+答えだけ)でも入っている項目だけ表示される
+- tier はネタバレ防止の開閉単位であり、**将来の無料/有料の分割線**(無料: free+answer=「方針+答え」まで / 有料: full=完全解答・別解・発想解説)。現状は全 tier 無料で、ボタンで開くだけ
+- 本文はすべて MathJax 対応(`$...$`)。表示時は HTML エスケープ(textContent)
+- 解答欄の冒頭に「運営者による解答例・解説であり、大学が公表した解答・解説ではない」旨を常時表示する
 
 ## 画面仕様(SPA的にJS切替)
 
@@ -182,6 +234,8 @@ create policy "comments_anon_hide_TEMP" on comments
 - 問題文の転記は冊子の**完全再現**を目指す: 句読点(京大は「,」「.」)・段落頭の全角1字下げ・改行位置の構造を原本に合わせる(数式の組版変更のみ出典行で明示)。`points`(配点)がある問題は冊子どおり大問見出し行の右端に「(◯点)」を表示する(京大のように冊子に配点が明記される大学のみ入力)
 - 問題文シートの大問見出しは実際の試験冊子に合わせ、JS定数 `QUESTION_NO_STYLE`(大学ごと。正本はここ)で切り替える。`daimon`=「第 1 問」(東大)/`boxed`=四角い枠付き数字・左寄せ(京大)。未登録の大学は `daimon`。**適用は問題文シートのみ**。問題を選ぶ側のUI(アーカイブの大問一覧・タグ検索の結果カード・詳細見出し・フィルタチップ・管理画面)は全大学共通で「第◯問」
 - 「印刷 / PDF保存」ボタン: 問題文シートだけを印刷する(印刷ダイアログからPDF保存可)。`body.print-problem` は問題文つき詳細画面の表示中に**常時付与**する(iOS Safari は `window.print()` の描画が非同期のため、印刷時だけの付け外しでは全画面が印刷されてしまう)
+- 問題文シートの下に「解答・解説」ボックス(`solutions` に1項目でも入っている問題のみ表示): 難易度(運営評価)・目標解答時間・必要な知識・方針は常時表示、「答えを表示」「完全解答を表示」ボタンで残りを開く(構成は上記「解答の構成」)。開くまで MathJax の typeset をしない(非表示要素は寸法が取れないため)。印刷(`body.print-problem`)には含めない
+- 解答がある問題は、アーカイブの大問一覧・タグ検索の結果カード・類題カードに「✎解答」バッジを表示する
 - `source_url` があれば「公式問題PDFを開く」リンクと、Wayback Machine への「アーカイブで開く」フォールバックリンクを表示(http/https のみ許可)。運用ルール: `source_url` 登録時に `https://web.archive.org/save/<URL>` で魚拓を残す(リンク切れ対策)
 - 難易度投票: ★1〜5タップで投票。`device_uuid`(localStorage、初回 `crypto.randomUUID()` 生成)で upsert。自分の投票済み状態を表示
 - コメント: 投稿フォーム(500字制限・トリムのみ、プレビューなし)、一覧は新着順、MathJax対応
@@ -192,6 +246,7 @@ create policy "comments_anon_hide_TEMP" on comments
 
 - 入口はフッターの目立たないリンク。パスワードはJS内定数 `ADMIN_PASSWORD`(プレースホルダ)との簡易照合(**セキュリティ機構ではなくUIゲート**。本命はRLS側)
 - 問題の新規登録・編集・削除(タグはチェックボックスで選択、問題文はテキストエリア、公式PDF URL・配点はテキスト入力)
+- 解答の登録・編集・削除: 問題一覧の各行の「解答」ボタン(登録済みは「解答 ✔」)から専用フォームを開く(11項目のテキストエリア等)。問題フォームとは同時に開かない
 - コメント管理: 全コメント一覧(通報数順/新着順ソート)、`is_hidden` トグル
 
 ## コーディング規約
@@ -207,8 +262,8 @@ create policy "comments_anon_hide_TEMP" on comments
 
 ## 今後のロードマップ
 
-1. **フェーズ1(現在)**: メタデータDBとして運用。問題文の表示機能は実装済みだが、データ投入は許諾状況の確認を前提とする
-2. 問題文・解説の本格掲載 — 大学/予備校等との**著作権許諾が取れてから**
-3. AdSense等の収益化 — コンテンツ(レコード数・コメント)が十分蓄積してから
+1. **フェーズ1(現在)**: メタデータDB+構造化解答として運用。問題文の表示機能は実装済みだが、データ投入は許諾状況の確認を前提とする。解答(運営者オリジナル)は許諾不要なので随時投入できる
+2. 問題文の本格掲載(他大学) — 各大学の**公開ポリシー確認/著作権許諾が取れてから**
+3. 収益化 — コンテンツが十分蓄積してから。解答の無料/有料分割(無料:「方針+答え」まで / 有料: 完全解答・別解・発想解説)は `SOLUTION_SECTIONS` の tier がそのまま分割線になる設計。AdSense等も選択肢
 4. 管理画面の本格認証(Supabase Auth / Edge Function)への移行
 5. 理科(物理・化学・地学)への拡張構想 — テーブル・タグ体系を科目ごとに分離して横展開

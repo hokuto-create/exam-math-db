@@ -11,7 +11,8 @@ window.MathJax = {
   options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
 };
 </script>
-<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<!-- SVG出力を使う(CHTMLはiOS Safariで「sin」の i など一部グリフのベースラインがずれる) -->
+<script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
@@ -247,14 +248,14 @@ textarea { resize: vertical; }
 }
 .source-link:active { opacity: .7; }
 .source-link.secondary { color: var(--muted); font-size: 12px; }
-.vote-box, .comments-box, .problem-box, .tags-box, .related-box {
+.vote-box, .comments-box, .problem-box, .tags-box, .related-box, .solution-box {
   background: var(--bg2);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 14px;
   margin-bottom: 12px;
 }
-.vote-box h3, .comments-box h3, .problem-box h3, .tags-box h3, .related-box h3 { margin: 0 0 8px; font-size: 14px; }
+.vote-box h3, .comments-box h3, .problem-box h3, .tags-box h3, .related-box h3, .solution-box h3 { margin: 0 0 8px; font-size: 14px; }
 .tags-box .tag-section:first-child { margin-top: 0; }
 .related-box .related-note { font-size: 11.5px; color: var(--muted); margin: -2px 0 8px; }
 .related-box .card:last-child { margin-bottom: 0; }
@@ -264,6 +265,31 @@ textarea { resize: vertical; }
   justify-content: space-between;
   gap: 8px;
 }
+
+/* ---------- 解答・解説 ---------- */
+.solution-note { font-size: 11.5px; color: var(--muted); margin: -2px 0 8px; }
+.sol-meta { display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: 13px; margin-bottom: 4px; align-items: baseline; }
+.sol-meta .label { color: var(--muted); font-size: 11.5px; margin-right: 4px; }
+.sol-section { margin-top: 12px; }
+.sol-section h4 {
+  margin: 0 0 4px;
+  font-size: 12.5px;
+  color: var(--muted);
+  font-weight: 600;
+  letter-spacing: .03em;
+}
+.sol-section .sol-body {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 1.9;
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+.sol-reveal { margin-top: 12px; width: 100%; font-weight: 600; }
+.sol-mark { color: var(--ok); }
 
 /* 試験冊子風の問題文シート */
 .exam-sheet {
@@ -424,7 +450,7 @@ textarea { resize: vertical; }
 .checkbox-grid label { display: flex; align-items: center; gap: 6px; color: var(--text); font-size: 13px; margin: 0; padding: 3px 0; }
 .checkbox-grid .group-head { grid-column: 1 / -1; font-size: 11.5px; color: var(--muted); margin-top: 6px; font-weight: 600; }
 .admin-toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
-#problem-form-wrap {
+#problem-form-wrap, #solution-form-wrap {
   background: var(--bg2);
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -570,6 +596,11 @@ footer.site .admin-link {
         <div id="exam-source" class="exam-source" hidden></div>
       </div>
     </div>
+    <div id="solution-box" class="solution-box" hidden>
+      <h3>解答・解説</h3>
+      <div class="solution-note">運営者による解答例・解説であり,大学が公表した解答・解説ではありません。</div>
+      <div id="solution-body"></div>
+    </div>
     <div class="vote-box">
       <h3>難易度投票</h3>
       <div id="vote-stars" class="vote-stars"></div>
@@ -633,6 +664,38 @@ footer.site .admin-link {
           </div>
         </div>
       </div>
+      <div id="solution-form-wrap" hidden>
+        <h3 id="sf-title" style="margin:0 0 10px;font-size:14px"></h3>
+        <div class="form-grid">
+          <div class="form-2col">
+            <div><label>難易度(運営評価 1〜5・任意)</label>
+              <select id="sf-difficulty">
+                <option value="">未設定</option>
+                <option value="1">★1(易)</option>
+                <option value="2">★2(標準)</option>
+                <option value="3">★3(やや難)</option>
+                <option value="4">★4(難)</option>
+                <option value="5">★5(最難)</option>
+              </select>
+            </div>
+            <div><label>目標解答時間(分・任意)</label><input id="sf-time" type="number" inputmode="numeric" placeholder="30"></div>
+          </div>
+          <div><label>必要な知識(任意・数式は $x^2$ のように囲む。以下同じ)</label><textarea id="sf-prerequisites" rows="2"></textarea></div>
+          <div><label>方針</label><textarea id="sf-approach" rows="4"></textarea></div>
+          <div><label>答え(答えのみ。証明問題はその旨を書く)</label><textarea id="sf-answer" rows="2"></textarea></div>
+          <div><label>完全解答</label><textarea id="sf-full_solution" rows="12"></textarea></div>
+          <div><label>発想の理由(なぜこの置換・補助線か/どの条件を見て解法を決めるか/試験中にどう発想するか)</label><textarea id="sf-insight" rows="5"></textarea></div>
+          <div><label>別解</label><textarea id="sf-alternatives" rows="4"></textarea></div>
+          <div><label>よくある誤答</label><textarea id="sf-common_mistakes" rows="3"></textarea></div>
+          <div><label>採点上必要な記述</label><textarea id="sf-grading_notes" rows="3"></textarea></div>
+          <div><label>この問題から学ぶこと</label><textarea id="sf-takeaways" rows="3"></textarea></div>
+          <div class="filter-actions">
+            <button id="sf-save" class="primary">解答を保存</button>
+            <button id="sf-delete" class="danger-btn">解答を削除</button>
+            <button id="sf-cancel" class="ghost">キャンセル</button>
+          </div>
+        </div>
+      </div>
       <div id="admin-problem-list"></div>
       <h2>コメント管理</h2>
       <div class="admin-toolbar">
@@ -646,7 +709,7 @@ footer.site .admin-link {
   </section>
 
   <footer class="site">
-    <div>大学入試 過去問DB — 解説は掲載していません</div>
+    <div>大学入試 過去問DB — 解答・解説は運営者によるものです(大学公表のものではありません)</div>
     <button id="admin-link" class="admin-link">管理</button>
   </footer>
 </div>
@@ -763,6 +826,25 @@ const QUESTION_NO_STYLE = {
   "京都大学": "boxed",
 };
 
+// 解答・解説のセクション定義(表示順)。tier はネタバレ防止の開閉単位で、
+// 将来の無料/有料の分割線でもある(無料: free+answer / 有料: full)。
+//   free   = 常時表示
+//   answer = 「答えを表示」ボタンで開く
+//   full   = 「完全解答を表示」ボタンで開く
+// 難易度(運営評価)・目標解答時間は solutions テーブルの difficulty / target_time_min、
+// 「類題」は既存の自動類題セクション(renderRelated)がその役割を担う
+const SOLUTION_SECTIONS = [
+  { key: "prerequisites",   label: "必要な知識",           tier: "free" },
+  { key: "approach",        label: "方針",                 tier: "free" },
+  { key: "answer",          label: "答え",                 tier: "answer" },
+  { key: "full_solution",   label: "完全解答",             tier: "full" },
+  { key: "insight",         label: "発想の理由",           tier: "full" },
+  { key: "alternatives",    label: "別解",                 tier: "full" },
+  { key: "common_mistakes", label: "よくある誤答",         tier: "full" },
+  { key: "grading_notes",   label: "採点上必要な記述",     tier: "full" },
+  { key: "takeaways",       label: "この問題から学ぶこと", tier: "full" },
+];
+
 const METHOD_TAG_GROUPS = [...new Set(METHOD_TAGS.map(t => t.group))];
 const unitTagName = id => (UNIT_TAGS.find(t => t.id === id) || { name: "?" }).name;
 const methodTagName = id => (METHOD_TAGS.find(t => t.id === id) || { name: "?" }).name;
@@ -818,6 +900,30 @@ const SAMPLE_DATA = {
     { id: 3, problem_id: 6, device_uuid: "demo-c", body: "約数を $3$ で割った余りで分類して素因数の指数で数える。(3)は場合分けを丁寧に。", is_hidden: false, reported_count: 0, created_at: "2026-03-05T09:15:00Z" },
     { id: 4, problem_id: 9, device_uuid: "demo-a", body: "難問。$a_{n+1} = a_n^2 + 1$ 型の周期性に気づくまでが勝負。", is_hidden: false, reported_count: 1, created_at: "2026-02-28T18:00:00Z" },
     { id: 5, problem_id: 2, device_uuid: "demo-d", body: "(不適切な内容のため非表示のサンプル)", is_hidden: true, reported_count: 3, created_at: "2026-03-06T00:00:00Z" },
+  ],
+  solutions: [
+    // ---- 東京大学 2026 第1問: 全項目入りの解答例(実データ: db/seed.sql と同期)----
+    {
+      id: 1, problem_id: 1, difficulty: 3, target_time_min: 30,
+      prerequisites: "三角関数の加法定理/置換積分/$\\cos^2x,\\ \\cos^4x$ の定積分(半角公式)/導関数の符号と増減/関数の偶奇性",
+      approach: "(1) $f'(\\theta)=\\cos\\theta-1+\\dfrac{\\theta^2}{2}$ の符号を,もう一度微分($(f')'(\\theta)=\\theta-\\sin\\theta$)して調べる。$f$ は単調増加とわかるので,両端の値が $M,\\ m$。\n(2) 加法定理で $\\sin(\\cos x-x)$ を展開すると,$\\cos(\\cos x)\\sin x$ の項は置換 $t=\\cos x$ で消える。残る $\\sin(\\cos x)\\cos x$ に対し,$\\sin\\theta=\\theta-\\dfrac{\\theta^3}{6}+f(\\theta)$($\\theta=\\cos x$)を代入して主要部 $\\dfrac{7}{8}\\pi$ を計算し,誤差項 $f(\\cos x)\\cos x$ を「非負かつ $M|\\cos x|$ 以下」と評価する。",
+      answer: "(1) $M=\\sin1-\\dfrac{5}{6}$,$m=-\\sin1+\\dfrac{5}{6}\\ (=-M)$\n(2) 証明問題(方針・完全解答を参照)",
+      full_solution: "(1) $f'(\\theta)=\\cos\\theta-1+\\dfrac{\\theta^2}{2}$ とおく。さらに\n$$f''(\\theta)=-\\sin\\theta+\\theta$$\n$\\theta\\geqq0$ では $(\\theta-\\sin\\theta)'=1-\\cos\\theta\\geqq0$ かつ $\\theta=0$ で値 $0$ だから $f''(\\theta)\\geqq0$。$f''$ は奇関数だから $\\theta\\leqq0$ では $f''(\\theta)\\leqq0$。よって $f'$ は $\\theta=0$ で最小となり,$f'(0)=0$ だから $-1\\leqq\\theta\\leqq1$ で\n$$f'(\\theta)\\geqq0(等号は\\ \\theta=0\\ のみ)$$\nゆえに $f$ はこの区間で単調増加であり,\n$$M=f(1)=\\sin1-\\frac{5}{6},\\qquad m=f(-1)=-\\sin1+\\frac{5}{6}=-M$$\n\n(2) 求める積分を $I$ とする。加法定理より\n$$\\sin(\\cos x-x)=\\sin(\\cos x)\\cos x-\\cos(\\cos x)\\sin x$$\n第2項は $t=\\cos x$($dt=-\\sin x\\,dx$)の置換により\n$$\\int_0^{2\\pi}\\cos(\\cos x)\\sin x\\,dx=\\int_1^1\\cos t\\,dt=0$$\nよって\n$$I=\\int_0^{2\\pi}\\sin(\\cos x)\\cos x\\,dx$$\n(1)の $f$ を用いると $\\sin\\theta=\\theta-\\dfrac{\\theta^3}{6}+f(\\theta)$ であり,$\\cos x\\in[-1,\\ 1]$ だから $\\theta=\\cos x$ を代入して\n$$\\sin(\\cos x)\\cos x=\\cos^2x-\\frac{\\cos^4x}{6}+f(\\cos x)\\cos x$$\n$\\displaystyle\\int_0^{2\\pi}\\cos^2x\\,dx=\\pi$,$\\displaystyle\\int_0^{2\\pi}\\cos^4x\\,dx=\\frac{3}{4}\\pi$ より\n$$\\int_0^{2\\pi}\\left(\\cos^2x-\\frac{\\cos^4x}{6}\\right)dx=\\pi-\\frac{1}{6}\\cdot\\frac{3}{4}\\pi=\\frac{7}{8}\\pi$$\n残る誤差項を評価する。$f$ は奇関数で,(1)より $-1\\leqq\\theta\\leqq1$ で単調増加かつ $f(0)=0$ だから,この区間で $f(\\theta)$ と $\\theta$ は常に同符号。よって\n$$f(\\cos x)\\cos x\\geqq0$$\nまた $-1\\leqq\\theta\\leqq1$ で $-M=m\\leqq f(\\theta)\\leqq M$ だから $|f(\\cos x)|\\leqq M$ であり,$f(\\cos x)\\cos x\\leqq M|\\cos x|$。$\\displaystyle\\int_0^{2\\pi}|\\cos x|\\,dx=4$ より\n$$0\\leqq\\int_0^{2\\pi}f(\\cos x)\\cos x\\,dx\\leqq4M$$\n以上より\n$$\\frac{7}{8}\\pi\\leqq I\\leqq\\frac{7}{8}\\pi+4M$$\nが示された。■",
+      insight: "中身の $\\cos x-x$ は $[-1,\\ 1]$ に収まらないので,(1)の $f$ を $\\sin(\\cos x-x)$ に直接使うことはできない。ここで手が止まったら「加法定理でほどく」を試す。展開して出る $\\cos(\\cos x)\\sin x$ は $g(\\cos x)\\sin x$ 型で,置換 $t=\\cos x$ により消えるので,実質の被積分関数は $\\sin(\\cos x)\\cos x$ だけになる。\n(1)の $f(\\theta)=\\sin\\theta-\\theta+\\dfrac{\\theta^3}{6}$ は $\\sin\\theta$ の3次近似の誤差そのもの。「(1)で最大値・最小値 → (2)で不等式評価」という誘導は,「近似の主要部が $\\dfrac{7}{8}\\pi$,誤差が $4M$ 以内」という構図を示唆している。さらに目標の下限が $\\dfrac{7}{8}\\pi$ ちょうど($-4M$ が現れない)ことから,誤差項が非負,すなわち $f(\\cos x)\\cos x\\geqq0$(同符号)に気づきたい。",
+      alternatives: "・(1)は $\\cos\\theta\\geqq1-\\dfrac{\\theta^2}{2}$($\\theta\\ne0$ で等号なし)を先に示し,そこから $f'>0$ を導いてもよい(同値な議論)。\n・(2)の $\\displaystyle\\int_0^{2\\pi}\\cos(\\cos x)\\sin x\\,dx=0$ は,置換 $x\\mapsto2\\pi-x$ で被積分関数が符号反転することからも示せる。\n・「(周期関数)$\\times\\sin x$ で中身が $\\cos x$ の合成」は原始関数が書ける,と覚えておくと展開の方針が早く立つ。",
+      common_mistakes: "・$\\sin(\\cos x-x)$ に直接 $\\theta-\\dfrac{\\theta^3}{6}$ の近似を適用する($\\cos x-x$ は $[-1,\\ 1]$ を大きくはみ出すので(1)は使えない)。\n・下限側で $f(\\cos x)\\cos x\\geqq0$ の根拠(奇関数+単調増加+$f(0)=0$)を述べず,$\\dfrac{7}{8}\\pi-4M$ 止まりの評価しか得られない。\n・$\\displaystyle\\int_0^{2\\pi}|\\cos x|\\,dx=4$ を $0$ や $2$ と誤る($\\cos x$ 自体の積分と混同)。\n・$\\cos^4x$ の定積分 $\\dfrac{3}{4}\\pi$ の計算ミス(半角公式を2回使う)。",
+      grading_notes: "・(1) $f'$ の符号を論じる際,$f''(\\theta)=\\theta-\\sin\\theta$ の符号の根拠($\\theta\\geqq0$ で $\\theta\\geqq\\sin\\theta$)と,奇関数性による $\\theta<0$ 側の処理を明記する。\n・(2) $\\displaystyle\\int_0^{2\\pi}\\cos(\\cos x)\\sin x\\,dx=0$ は置換の式変形つきで示す(「明らか」で流さない)。\n・$m=-M$($f$ が奇関数)を使う箇所は根拠を一言添える。\n・$f(\\cos x)\\cos x\\geqq0$ の同符号の議論は下限 $\\dfrac{7}{8}\\pi$ の成否を分ける本質部分なので必ず記述する。",
+      takeaways: "・(1)で与えられた関数は $\\sin\\theta$ の3次テイラー近似の誤差。「誘導で与えられた関数の正体」を見抜くと(2)での使い所が定まる。\n・周期関数の定積分では,置換($t=\\cos x$,$x\\mapsto2\\pi-x$ など)で消える項を先に探す。\n・不等式の証明は「主要部の計算+誤差項の符号と大きさの評価」に分解する。目標の式の形(下限に誤差が現れない等)から,必要な評価の強さを逆算できる。",
+      created_at: "2026-03-10T00:00:00Z",
+    },
+    // ---- 京都大学 2026 第6問: 「方針+答え」だけの部分入力の例 ----
+    {
+      id: 2, problem_id: 20, difficulty: 2, target_time_min: 20,
+      prerequisites: "組合せ $\\binom{n}{r}$ の計算/期待値の定義/$\\displaystyle\\sum_{k=r}^{n}\\binom{k}{r}=\\binom{n+1}{r+1}$(ホッケースティック恒等式)",
+      approach: "最大値が $k$ となるのは「$k$ の札を取り,残り $2$ 枚を $1$〜$k-1$ から取る」場合だから $P(X=k)=\\dfrac{\\binom{k-1}{2}}{\\binom{n}{3}}$。期待値の和は $k\\binom{k-1}{2}=3\\binom{k}{3}$ と変形すると $\\displaystyle\\sum_{k=3}^{n}\\binom{k}{3}=\\binom{n+1}{4}$ で一気に閉じる。",
+      answer: "$E(X)=\\dfrac{3(n+1)}{4}$",
+      created_at: "2026-03-10T00:00:00Z",
+    },
   ],
 };
 
@@ -887,7 +993,7 @@ const sbClient = isSupabaseConfigured
   ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   : null;
 
-let demoNextId = { votes: 1000, comments: 1000, problems: 1000 };
+let demoNextId = { votes: 1000, comments: 1000, problems: 1000, solutions: 1000 };
 
 const api = {
   async loadAll() {
@@ -896,17 +1002,22 @@ const api = {
       state.problems = JSON.parse(JSON.stringify(SAMPLE_DATA.problems));
       state.votes = JSON.parse(JSON.stringify(SAMPLE_DATA.votes));
       state.comments = JSON.parse(JSON.stringify(SAMPLE_DATA.comments));
+      state.solutions = JSON.parse(JSON.stringify(SAMPLE_DATA.solutions));
       return;
     }
-    const [p, v, c] = await Promise.all([
+    const [p, v, c, s] = await Promise.all([
       sbClient.from("problems").select("*").order("year", { ascending: false }),
       sbClient.from("votes").select("*"),
       sbClient.from("comments").select("*"),
+      sbClient.from("solutions").select("*"),
     ]);
     for (const r of [p, v, c]) if (r.error) throw r.error;
     state.problems = p.data;
     state.votes = v.data;
     state.comments = c.data;
+    // solutions はテーブル未作成の既存環境でも他画面が動くよう、失敗しても続行する
+    state.solutions = s.error ? [] : s.data;
+    if (s.error) console.warn("solutions の読み込みに失敗(テーブル未作成?):", s.error.message);
   },
 
   async upsertVote(problemId, difficulty) {
@@ -987,6 +1098,33 @@ const api = {
     state.problems = state.problems.filter(p => p.id !== id);
     state.votes = state.votes.filter(v => v.problem_id !== id);
     state.comments = state.comments.filter(c => c.problem_id !== id);
+    state.solutions = state.solutions.filter(s => s.problem_id !== id);
+  },
+
+  async saveSolution(problemId, fields) {
+    if (sbClient) {
+      const { data, error } = await sbClient
+        .from("solutions")
+        .upsert({ problem_id: problemId, ...fields }, { onConflict: "problem_id" })
+        .select()
+        .single();
+      if (error) throw error;
+      const i = state.solutions.findIndex(s => s.problem_id === problemId);
+      if (i >= 0) state.solutions[i] = data;
+      else state.solutions.push(data);
+      return;
+    }
+    const existing = state.solutions.find(s => s.problem_id === problemId);
+    if (existing) Object.assign(existing, fields);
+    else state.solutions.push({ id: demoNextId.solutions++, problem_id: problemId, created_at: new Date().toISOString(), ...fields });
+  },
+
+  async deleteSolution(problemId) {
+    if (sbClient) {
+      const { error } = await sbClient.from("solutions").delete().eq("problem_id", problemId);
+      if (error) throw error;
+    }
+    state.solutions = state.solutions.filter(s => s.problem_id !== problemId);
   },
 
   async setCommentHidden(id, hidden) {
@@ -1006,6 +1144,7 @@ const state = {
   problems: [],
   votes: [],
   comments: [],
+  solutions: [],
   filters: {
     universities: [],
     examTypes: [],
@@ -1021,6 +1160,7 @@ const state = {
   detailReturn: "browse", // 詳細画面の戻り先: "uni" | "list" | "browse"
   adminAuthed: false,
   editingProblemId: null, // null=フォーム非表示, 0=新規, >0=編集
+  editingSolutionProblemId: null, // null=解答フォーム非表示, >0=対象の問題ID
 };
 
 /* =====================================================================
@@ -1044,6 +1184,13 @@ function myVoteFor(problemId) {
     v => v.problem_id === problemId && v.device_uuid === DEVICE_UUID
   );
   return v ? v.difficulty : null;
+}
+function solutionFor(problemId) {
+  return state.solutions.find(s => s.problem_id === problemId) || null;
+}
+function hasSolution(problemId) {
+  const s = solutionFor(problemId);
+  return !!s && SOLUTION_SECTIONS.some(sec => (s[sec.key] || "").trim());
 }
 function starsHtml(avg) {
   const n = Math.round(avg);
@@ -1158,7 +1305,7 @@ function renderUniversity() {
       row.innerHTML = `
         <div class="head">
           <span class="qno">第${p.question_no}問</span>
-          <span class="stats">${avg === null ? "難易度 未投票" : `${starsHtml(avg)} ${avg.toFixed(1)}(${nVotes}票)`} ・ 💬 ${nComments}</span>
+          <span class="stats">${avg === null ? "難易度 未投票" : `${starsHtml(avg)} ${avg.toFixed(1)}(${nVotes}票)`} ・ 💬 ${nComments}${hasSolution(p.id) ? ' ・ <span class="sol-mark">✎解答</span>' : ""}</span>
         </div>
         <div class="tags">
           ${(p.unit_tags || []).map(t => `<span class="tag">${escapeHtml(unitTagName(t))}</span>`).join("")}
@@ -1295,6 +1442,7 @@ function renderList() {
       <div class="stats">
         <span>${avg === null ? "難易度 未投票" : `${starsHtml(avg)} ${avg.toFixed(1)}(${nVotes}票)`}</span>
         <span>💬 ${nComments}</span>
+        ${hasSolution(p.id) ? '<span class="sol-mark">✎解答</span>' : ""}
       </div>`;
     card.onclick = () => openDetail(p.id, "list");
     wrap.appendChild(card);
@@ -1382,9 +1530,80 @@ function renderDetail() {
     typeset(el);
   }
 
+  renderSolution(p);
   renderVoteBox(p);
   renderComments(p);
   renderRelated(p);
+}
+
+/* 解答・解説: SOLUTION_SECTIONS の定義順に表示する。
+   tier=answer / full はネタバレ防止のため開閉式(=将来の無料/有料の分割線)。
+   「類題」(構成の10番)は下の自動類題セクションが担う */
+function renderSolution(p) {
+  const box = $("#solution-box");
+  const body = $("#solution-body");
+  body.innerHTML = "";
+  const s = solutionFor(p.id);
+  const has = !!s && (s.difficulty || s.target_time_min || SOLUTION_SECTIONS.some(sec => (s[sec.key] || "").trim()));
+  box.hidden = !has;
+  if (!has) return;
+
+  const addSection = (parent, sec) => {
+    const text = (s[sec.key] || "").replace(/^[\r\n]+/, "").replace(/\s+$/, "");
+    if (!text.trim()) return;
+    const div = document.createElement("div");
+    div.className = "sol-section";
+    const h = document.createElement("h4");
+    h.textContent = sec.label;
+    const b = document.createElement("div");
+    b.className = "sol-body";
+    b.textContent = text; // XSS対策: textContentで挿入($...$はMathJaxが処理)
+    div.appendChild(h);
+    div.appendChild(b);
+    parent.appendChild(div);
+  };
+
+  // 常時表示: 難易度(運営評価)・目標解答時間・free セクション
+  const freeWrap = document.createElement("div");
+  const metaParts = [];
+  const diff = Number(s.difficulty);
+  if (Number.isFinite(diff) && diff >= 1 && diff <= 5) {
+    metaParts.push(`<span><span class="label">難易度(運営評価)</span>${starsHtml(diff)}</span>`);
+  }
+  const tmin = Number(s.target_time_min);
+  if (s.target_time_min != null && Number.isFinite(tmin) && tmin > 0) {
+    metaParts.push(`<span><span class="label">目標解答時間</span><b>${tmin}分</b></span>`);
+  }
+  if (metaParts.length) {
+    const meta = document.createElement("div");
+    meta.className = "sol-meta";
+    meta.innerHTML = metaParts.join("");
+    freeWrap.appendChild(meta);
+  }
+  for (const sec of SOLUTION_SECTIONS.filter(x => x.tier === "free")) addSection(freeWrap, sec);
+  body.appendChild(freeWrap);
+  typeset(freeWrap);
+
+  // 開閉式(開くまで typeset しない: 非表示要素の数式は寸法が取れないため)
+  const addReveal = (tier, label) => {
+    const secs = SOLUTION_SECTIONS.filter(x => x.tier === tier && (s[x.key] || "").trim());
+    if (secs.length === 0) return;
+    const btn = document.createElement("button");
+    btn.className = "sol-reveal";
+    btn.textContent = label;
+    const wrap = document.createElement("div");
+    wrap.hidden = true;
+    for (const sec of secs) addSection(wrap, sec);
+    btn.onclick = () => {
+      btn.remove();
+      wrap.hidden = false;
+      typeset(wrap);
+    };
+    body.appendChild(btn);
+    body.appendChild(wrap);
+  };
+  addReveal("answer", "答えを表示");
+  addReveal("full", "完全解答を表示");
 }
 
 /* 類題: 単元タグと解法キーの両方が重なる問題を関連度順に最大 RELATED_MAX 件表示。
@@ -1427,6 +1646,7 @@ function renderRelated(p) {
       <div class="stats">
         <span>${avg === null ? "難易度 未投票" : `${starsHtml(avg)} ${avg.toFixed(1)}(${nVotes}票)`}</span>
         <span>💬 ${nComments}</span>
+        ${hasSolution(q.id) ? '<span class="sol-mark">✎解答</span>' : ""}
       </div>`;
     // 遷移元の戻り先を引き継ぐ(類題から戻っても元の一覧に帰れる)
     card.onclick = () => openDetail(q.id, state.detailReturn);
@@ -1560,10 +1780,12 @@ function renderAdminProblems() {
         <div><b>${escapeHtml(problemTitle(p))}</b>${p.admin_note ? `<div class="c-body">メモ: ${escapeHtml(p.admin_note)}</div>` : ""}</div>
         <div class="row-actions">
           <button class="small edit-btn">編集</button>
+          <button class="small sol-btn">${solutionFor(p.id) ? "解答 ✔" : "解答"}</button>
           <button class="small danger-btn del-btn">削除</button>
         </div>
       </div>`;
     row.querySelector(".edit-btn").onclick = () => openProblemForm(p.id);
+    row.querySelector(".sol-btn").onclick = () => openSolutionForm(p.id);
     row.querySelector(".del-btn").onclick = async () => {
       if (!confirm(`「${problemTitle(p)}」を削除しますか?\n投票・コメントも削除されます。`)) return;
       try {
@@ -1618,12 +1840,16 @@ function openProblemForm(problemId) {
   for (const cb of document.querySelectorAll('#pf-method-checks input[type="checkbox"]')) {
     cb.checked = !!p && (p.method_tags || []).includes(Number(cb.value));
   }
+  // 解答フォームと同時には開かない
+  state.editingSolutionProblemId = null;
+  $("#solution-form-wrap").hidden = true;
   $("#problem-form-wrap").hidden = false;
   $("#problem-form-wrap").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function renderAdminProblemForm() {
   $("#problem-form-wrap").hidden = state.editingProblemId === null;
+  $("#solution-form-wrap").hidden = state.editingSolutionProblemId === null;
 }
 
 async function saveProblemForm() {
@@ -1662,6 +1888,53 @@ async function saveProblemForm() {
     await api.saveProblem(fields, state.editingProblemId || null);
     state.editingProblemId = null;
     toast("保存しました");
+    refreshAll();
+  } catch (e) {
+    toast("保存に失敗しました: " + (e.message || e));
+  }
+}
+
+function openSolutionForm(problemId) {
+  const p = state.problems.find(p => p.id === problemId);
+  if (!p) return;
+  state.editingSolutionProblemId = problemId;
+  // 問題フォームと同時には開かない
+  state.editingProblemId = null;
+  $("#problem-form-wrap").hidden = true;
+  const s = solutionFor(problemId);
+  $("#sf-title").textContent = `解答編集: ${problemTitle(p)}`;
+  $("#sf-difficulty").value = s && s.difficulty ? String(s.difficulty) : "";
+  $("#sf-time").value = s && s.target_time_min != null ? s.target_time_min : "";
+  for (const sec of SOLUTION_SECTIONS) {
+    $(`#sf-${sec.key}`).value = s ? (s[sec.key] || "") : "";
+  }
+  $("#sf-delete").hidden = !s;
+  $("#solution-form-wrap").hidden = false;
+  $("#solution-form-wrap").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+async function saveSolutionForm() {
+  const problemId = state.editingSolutionProblemId;
+  if (problemId == null) return;
+  const fields = {
+    difficulty: $("#sf-difficulty").value ? Number($("#sf-difficulty").value) : null,
+    target_time_min: $("#sf-time").value.trim() ? Number($("#sf-time").value) : null,
+  };
+  for (const sec of SOLUTION_SECTIONS) {
+    // 数式ブロックの体裁を保つため trim() しない(前後の空行のみ除去)
+    const t = $(`#sf-${sec.key}`).value.replace(/^[\r\n]+/, "").replace(/\s+$/, "");
+    fields[sec.key] = t.trim() ? t : null;
+  }
+  const hasAny = fields.difficulty || fields.target_time_min || SOLUTION_SECTIONS.some(sec => fields[sec.key]);
+  if (!hasAny) {
+    toast("いずれかの項目を入力してください(解答を消すには「解答を削除」)");
+    return;
+  }
+  try {
+    await api.saveSolution(problemId, fields);
+    state.editingSolutionProblemId = null;
+    $("#solution-form-wrap").hidden = true;
+    toast("解答を保存しました");
     refreshAll();
   } catch (e) {
     toast("保存に失敗しました: " + (e.message || e));
@@ -1777,6 +2050,26 @@ function setupEvents() {
   $("#pf-cancel").onclick = () => {
     state.editingProblemId = null;
     $("#problem-form-wrap").hidden = true;
+  };
+  $("#sf-save").onclick = saveSolutionForm;
+  $("#sf-cancel").onclick = () => {
+    state.editingSolutionProblemId = null;
+    $("#solution-form-wrap").hidden = true;
+  };
+  $("#sf-delete").onclick = async () => {
+    const problemId = state.editingSolutionProblemId;
+    if (problemId == null) return;
+    const p = state.problems.find(p => p.id === problemId);
+    if (!confirm(`「${p ? problemTitle(p) : `問題#${problemId}`}」の解答を削除しますか?`)) return;
+    try {
+      await api.deleteSolution(problemId);
+      state.editingSolutionProblemId = null;
+      $("#solution-form-wrap").hidden = true;
+      toast("解答を削除しました");
+      refreshAll();
+    } catch (e) {
+      toast("削除に失敗しました: " + (e.message || e));
+    }
   };
   $("#admin-comment-sort").addEventListener("change", renderAdminComments);
 }
