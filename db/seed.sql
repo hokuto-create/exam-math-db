@@ -328,10 +328,10 @@ on conflict (problem_id) do update set
 insert into solutions
   (problem_id, difficulty, target_time_min, prerequisites, approach, answer)
 select p.id, 2, 20,
-  $txt$組合せ $\binom{n}{r}$ の計算/期待値の定義/$\displaystyle\sum_{k=r}^{n}\binom{k}{r}=\binom{n+1}{r+1}$(ホッケースティック恒等式)$txt$,
+  $txt$組合せ ${}_n\mathrm{C}_r$ の計算/期待値の定義/$\displaystyle\sum_{k=r}^{n}{}_k\mathrm{C}_r={}_{n+1}\mathrm{C}_{r+1}$(ホッケースティック恒等式)$txt$,
   $txt$最大値が $k$ となるのは「$k$ の札を取り,残り $2$ 枚を $1$〜$k-1$ から取る」場合だから
-$$P(X=k)=\dfrac{\binom{k-1}{2}}{\binom{n}{3}}$$
-期待値の和は $k\binom{k-1}{2}=3\binom{k}{3}$ と変形すると,$\displaystyle\sum_{k=3}^{n}\binom{k}{3}=\binom{n+1}{4}$ で一気に閉じる。$txt$,
+$$P(X=k)=\dfrac{{}_{k-1}\mathrm{C}_2}{{}_n\mathrm{C}_3}$$
+期待値の和は $k\cdot{}_{k-1}\mathrm{C}_2=3\,{}_k\mathrm{C}_3$ と変形すると,$\displaystyle\sum_{k=3}^{n}{}_k\mathrm{C}_3={}_{n+1}\mathrm{C}_4$ で一気に閉じる。$txt$,
   $txt$$E(X)=\dfrac{3(n+1)}{4}$$txt$
 from problems p
 where p.university = '京都大学' and p.year = 2026 and p.exam_type = '前期理系' and p.question_no = 6
