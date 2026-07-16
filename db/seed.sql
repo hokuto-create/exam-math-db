@@ -66,6 +66,43 @@ exception
 end $$;
 
 -- =====================================================================
+-- 解答・解説テーブル(既にあればスキップ)
+-- 運営者オリジナルの構造化解答。1問につき1件(problem_id で upsert)。
+-- 11項目構成のうち「難易度」= difficulty(投票平均とは別の運営評価)、
+-- 「目標解答時間」= target_time_min、「類題」はサイトの自動類題セクションが担う。
+-- 定義の正本は CLAUDE.md の「データ設計」
+-- =====================================================================
+create table if not exists solutions (
+  id              bigint generated always as identity primary key,
+  problem_id      bigint not null unique references problems(id) on delete cascade,
+  difficulty      int check (difficulty between 1 and 5), -- 運営評価の難易度
+  target_time_min int,   -- 目標解答時間(分)
+  prerequisites   text,  -- 必要な知識
+  approach        text,  -- 方針
+  answer          text,  -- 答え(答えのみ。証明問題はその旨)
+  full_solution   text,  -- 完全解答
+  insight         text,  -- 発想の理由(なぜこの置換・補助線か/どの条件で解法を決めるか)
+  alternatives    text,  -- 別解
+  common_mistakes text,  -- よくある誤答
+  grading_notes   text,  -- 採点上必要な記述
+  takeaways       text,  -- この問題から学ぶこと
+  created_at      timestamptz not null default now()
+);
+
+alter table solutions enable row level security;
+do $$
+begin
+  create policy "solutions_anon_select" on solutions
+    for select to anon using (true);
+exception
+  when duplicate_object then null;
+end $$;
+-- ※管理画面(anon key)から解答を書き込む場合のみ、下記の暫定ポリシーを追加する
+--   (誰でも書き込める状態になる点は problems と同じリスク。恒久対応は Auth 移行):
+-- create policy "solutions_anon_write_TEMP" on solutions
+--   for all to anon using (true) with check (true);
+
+-- =====================================================================
 -- 問題データ
 -- 形式: (大学, 年度, 試験区分, 大問番号, 単元タグID配列, 解法タグID配列, 管理メモ)
 -- =====================================================================
@@ -211,3 +248,87 @@ do update set
   source_url   = excluded.source_url,
   problem_text = excluded.problem_text,
   admin_note   = excluded.admin_note;
+
+-- =====================================================================
+-- 解答データ(運営者オリジナル。index.html の SAMPLE_DATA.solutions と同期)
+-- 文中に ' を含むため文字列は $txt$ ... $txt$ のドル引用で囲む
+-- =====================================================================
+insert into solutions
+  (problem_id, difficulty, target_time_min, prerequisites, approach, answer,
+   full_solution, insight, alternatives, common_mistakes, grading_notes, takeaways)
+select p.id, 3, 30,
+  $txt$三角関数の加法定理/置換積分/$\cos^2x,\ \cos^4x$ の定積分(半角公式)/導関数の符号と増減/関数の偶奇性$txt$,
+  $txt$(1) $f'(\theta)=\cos\theta-1+\dfrac{\theta^2}{2}$ の符号を,もう一度微分($(f')'(\theta)=\theta-\sin\theta$)して調べる。$f$ は単調増加とわかるので,両端の値が $M,\ m$。
+(2) 加法定理で $\sin(\cos x-x)$ を展開すると,$\cos(\cos x)\sin x$ の項は置換 $t=\cos x$ で消える。残る $\sin(\cos x)\cos x$ に対し,$\sin\theta=\theta-\dfrac{\theta^3}{6}+f(\theta)$($\theta=\cos x$)を代入して主要部 $\dfrac{7}{8}\pi$ を計算し,誤差項 $f(\cos x)\cos x$ を「非負かつ $M|\cos x|$ 以下」と評価する。$txt$,
+  $txt$(1) $M=\sin1-\dfrac{5}{6}$,$m=-\sin1+\dfrac{5}{6}\ (=-M)$
+(2) 証明問題(方針・完全解答を参照)$txt$,
+  $txt$(1) $f'(\theta)=\cos\theta-1+\dfrac{\theta^2}{2}$ とおく。さらに
+$$f''(\theta)=-\sin\theta+\theta$$
+$\theta\geqq0$ では $(\theta-\sin\theta)'=1-\cos\theta\geqq0$ かつ $\theta=0$ で値 $0$ だから $f''(\theta)\geqq0$。$f''$ は奇関数だから $\theta\leqq0$ では $f''(\theta)\leqq0$。よって $f'$ は $\theta=0$ で最小となり,$f'(0)=0$ だから $-1\leqq\theta\leqq1$ で
+$$f'(\theta)\geqq0(等号は\ \theta=0\ のみ)$$
+ゆえに $f$ はこの区間で単調増加であり,
+$$M=f(1)=\sin1-\frac{5}{6},\qquad m=f(-1)=-\sin1+\frac{5}{6}=-M$$
+
+(2) 求める積分を $I$ とする。加法定理より
+$$\sin(\cos x-x)=\sin(\cos x)\cos x-\cos(\cos x)\sin x$$
+第2項は $t=\cos x$($dt=-\sin x\,dx$)の置換により
+$$\int_0^{2\pi}\cos(\cos x)\sin x\,dx=\int_1^1\cos t\,dt=0$$
+よって
+$$I=\int_0^{2\pi}\sin(\cos x)\cos x\,dx$$
+(1)の $f$ を用いると $\sin\theta=\theta-\dfrac{\theta^3}{6}+f(\theta)$ であり,$\cos x\in[-1,\ 1]$ だから $\theta=\cos x$ を代入して
+$$\sin(\cos x)\cos x=\cos^2x-\frac{\cos^4x}{6}+f(\cos x)\cos x$$
+$\displaystyle\int_0^{2\pi}\cos^2x\,dx=\pi$,$\displaystyle\int_0^{2\pi}\cos^4x\,dx=\frac{3}{4}\pi$ より
+$$\int_0^{2\pi}\left(\cos^2x-\frac{\cos^4x}{6}\right)dx=\pi-\frac{1}{6}\cdot\frac{3}{4}\pi=\frac{7}{8}\pi$$
+残る誤差項を評価する。$f$ は奇関数で,(1)より $-1\leqq\theta\leqq1$ で単調増加かつ $f(0)=0$ だから,この区間で $f(\theta)$ と $\theta$ は常に同符号。よって
+$$f(\cos x)\cos x\geqq0$$
+また $-1\leqq\theta\leqq1$ で $-M=m\leqq f(\theta)\leqq M$ だから $|f(\cos x)|\leqq M$ であり,$f(\cos x)\cos x\leqq M|\cos x|$。$\displaystyle\int_0^{2\pi}|\cos x|\,dx=4$ より
+$$0\leqq\int_0^{2\pi}f(\cos x)\cos x\,dx\leqq4M$$
+以上より
+$$\frac{7}{8}\pi\leqq I\leqq\frac{7}{8}\pi+4M$$
+が示された。■$txt$,
+  $txt$中身の $\cos x-x$ は $[-1,\ 1]$ に収まらないので,(1)の $f$ を $\sin(\cos x-x)$ に直接使うことはできない。ここで手が止まったら「加法定理でほどく」を試す。展開して出る $\cos(\cos x)\sin x$ は $g(\cos x)\sin x$ 型で,置換 $t=\cos x$ により消えるので,実質の被積分関数は $\sin(\cos x)\cos x$ だけになる。
+(1)の $f(\theta)=\sin\theta-\theta+\dfrac{\theta^3}{6}$ は $\sin\theta$ の3次近似の誤差そのもの。「(1)で最大値・最小値 → (2)で不等式評価」という誘導は,「近似の主要部が $\dfrac{7}{8}\pi$,誤差が $4M$ 以内」という構図を示唆している。さらに目標の下限が $\dfrac{7}{8}\pi$ ちょうど($-4M$ が現れない)ことから,誤差項が非負,すなわち $f(\cos x)\cos x\geqq0$(同符号)に気づきたい。$txt$,
+  $txt$・(1)は $\cos\theta\geqq1-\dfrac{\theta^2}{2}$($\theta\ne0$ で等号なし)を先に示し,そこから $f'>0$ を導いてもよい(同値な議論)。
+・(2)の $\displaystyle\int_0^{2\pi}\cos(\cos x)\sin x\,dx=0$ は,置換 $x\mapsto2\pi-x$ で被積分関数が符号反転することからも示せる。
+・「(周期関数)$\times\sin x$ で中身が $\cos x$ の合成」は原始関数が書ける,と覚えておくと展開の方針が早く立つ。$txt$,
+  $txt$・$\sin(\cos x-x)$ に直接 $\theta-\dfrac{\theta^3}{6}$ の近似を適用する($\cos x-x$ は $[-1,\ 1]$ を大きくはみ出すので(1)は使えない)。
+・下限側で $f(\cos x)\cos x\geqq0$ の根拠(奇関数+単調増加+$f(0)=0$)を述べず,$\dfrac{7}{8}\pi-4M$ 止まりの評価しか得られない。
+・$\displaystyle\int_0^{2\pi}|\cos x|\,dx=4$ を $0$ や $2$ と誤る($\cos x$ 自体の積分と混同)。
+・$\cos^4x$ の定積分 $\dfrac{3}{4}\pi$ の計算ミス(半角公式を2回使う)。$txt$,
+  $txt$・(1) $f'$ の符号を論じる際,$f''(\theta)=\theta-\sin\theta$ の符号の根拠($\theta\geqq0$ で $\theta\geqq\sin\theta$)と,奇関数性による $\theta<0$ 側の処理を明記する。
+・(2) $\displaystyle\int_0^{2\pi}\cos(\cos x)\sin x\,dx=0$ は置換の式変形つきで示す(「明らか」で流さない)。
+・$m=-M$($f$ が奇関数)を使う箇所は根拠を一言添える。
+・$f(\cos x)\cos x\geqq0$ の同符号の議論は下限 $\dfrac{7}{8}\pi$ の成否を分ける本質部分なので必ず記述する。$txt$,
+  $txt$・(1)で与えられた関数は $\sin\theta$ の3次テイラー近似の誤差。「誘導で与えられた関数の正体」を見抜くと(2)での使い所が定まる。
+・周期関数の定積分では,置換($t=\cos x$,$x\mapsto2\pi-x$ など)で消える項を先に探す。
+・不等式の証明は「主要部の計算+誤差項の符号と大きさの評価」に分解する。目標の式の形(下限に誤差が現れない等)から,必要な評価の強さを逆算できる。$txt$
+from problems p
+where p.university = '東京大学' and p.year = 2026 and p.exam_type = '前期理系' and p.question_no = 1
+on conflict (problem_id) do update set
+  difficulty      = excluded.difficulty,
+  target_time_min = excluded.target_time_min,
+  prerequisites   = excluded.prerequisites,
+  approach        = excluded.approach,
+  answer          = excluded.answer,
+  full_solution   = excluded.full_solution,
+  insight         = excluded.insight,
+  alternatives    = excluded.alternatives,
+  common_mistakes = excluded.common_mistakes,
+  grading_notes   = excluded.grading_notes,
+  takeaways       = excluded.takeaways;
+
+-- 京都大学 2026 第6問: 「方針+答え」までの部分入力の例
+insert into solutions
+  (problem_id, difficulty, target_time_min, prerequisites, approach, answer)
+select p.id, 2, 20,
+  $txt$組合せ $\binom{n}{r}$ の計算/期待値の定義/$\displaystyle\sum_{k=r}^{n}\binom{k}{r}=\binom{n+1}{r+1}$(ホッケースティック恒等式)$txt$,
+  $txt$最大値が $k$ となるのは「$k$ の札を取り,残り $2$ 枚を $1$〜$k-1$ から取る」場合だから $P(X=k)=\dfrac{\binom{k-1}{2}}{\binom{n}{3}}$。期待値の和は $k\binom{k-1}{2}=3\binom{k}{3}$ と変形すると $\displaystyle\sum_{k=3}^{n}\binom{k}{3}=\binom{n+1}{4}$ で一気に閉じる。$txt$,
+  $txt$$E(X)=\dfrac{3(n+1)}{4}$$txt$
+from problems p
+where p.university = '京都大学' and p.year = 2026 and p.exam_type = '前期理系' and p.question_no = 6
+on conflict (problem_id) do update set
+  difficulty      = excluded.difficulty,
+  target_time_min = excluded.target_time_min,
+  prerequisites   = excluded.prerequisites,
+  approach        = excluded.approach,
+  answer          = excluded.answer;
